@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { MadeWithDyad } from '@/components/made-with-dyad';
+import { ThemeToggle } from '@/components/ThemeToggle'; // Import the new ThemeToggle component
 
 const Dashboard = () => {
   const {
@@ -38,7 +39,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col p-4 md:p-8">
-      <h1 className="text-4xl font-bold mb-6 text-center text-primary-foreground">Leaderboard Analyzer</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-4xl font-bold text-primary-foreground">Leaderboard Analyzer</h1>
+        <ThemeToggle /> {/* Place the ThemeToggle here */}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow">
         {/* Left Panel: Connection and Controls */}
