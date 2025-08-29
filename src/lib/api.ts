@@ -148,29 +148,6 @@ export class WebSocketClient extends CustomEventEmitter {
     });
   }
 
-  private determineEvent(payload: any): string {
-    if (typeof payload !== 'object' || payload === null) {
-      return 'unknown';
-    }
-    if ('user' in payload) return 'auth';
-    if ('leaderBoards' in payload) return 'getLeaderBoard';
-    if ('leaderboard' in payload) return 'leaderboard';
-    if ('rate' in payload) return 'getRate';
-    if ('levels' in payload) return 'getLevels';
-    if ('upgrades' in payload) return 'getUpgrades';
-    if ('friends' in payload) return 'getFriends';
-    if ('friendRequests' in payload) return 'getFriendRequests';
-    if ('notifications' in payload || 'userNotifications' in payload) return 'getUserNotification';
-    if ('users' in payload || 'userList' in payload) return 'userListForFriend';
-    if ('deleted' in payload) return 'deleteAccount';
-    if ('swap' in payload || 'transaction' in payload) return 'swapTransactions';
-    if ('bonus' in payload) return 'collectBonus';
-    if ('payout' in payload) return 'payoutFTN';
-    if ('error' in payload) return 'error';
-    if ('profile' in payload) return 'profileUpdate'; // Custom event for profile updates
-    return 'unknown';
-  }
-
   private parseSocketMessage(message: string): { msgId?: string; eventType: string; payload: any } | null {
     if (message === '3') { // Pong response
       return { eventType: 'pong', payload: null };
@@ -203,45 +180,31 @@ export class WebSocketClient extends CustomEventEmitter {
       try {
         const parsedArray = JSON.parse(jsonArrayString);
 
-        let eventType: string | undefined;
-        let payload: any;
+        let eventType: string = 'unknown';
+        let payload: any = {};
 
         if (Array.isArray(parsedArray) && parsedArray.length > 0) {
-          if (type === '3') { // Response to client-sent message
-            if (parsedArray.length === 0) {
-              eventType = 'ack';
-              payload = {};
-            } else if (typeof parsedArray[0] === 'string') {
-              try {
-                // Attempt to parse the first element as JSON
-                const innerPayload = JSON.parse(parsedArray[0]);
-                eventType = this.determineEvent(innerPayload);
-                payload = innerPayload;
-              } catch {
-                // If not JSON, treat as a simple string event type
-                eventType = parsedArray[0];
-                payload = parsedArray.length > 1 ? parsedArray[1] : {};
-              }
-            } else {
-              // If the first element is not a string, it might be the payload directly
-              eventType = this.determineEvent(parsedArray[0]);
-              payload = parsedArray[0];
-            }
-          } else if (type === '2') { // Server-initiated message
+          if (typeof parsedArray[0] === 'string') {
+            // Standard Socket.IO event: ["eventName", payload]
             eventType = parsedArray[0];
-            if (typeof parsedArray[1] === 'string') {
-              // Handle cases like ["profileUpdate", "{\"profile\":{...}}"]
-              payload = JSON.parse(parsedArray[1]);
-            } else {
-              payload = parsedArray[1];
+            if (parsedArray.length > 1) {
+              // Handle cases where payload itself is a JSON string (double-encoded)
+              payload = typeof parsedArray[1] === 'string' ? JSON.parse(parsedArray[1]) : parsedArray[1];
             }
+          } else {
+            // If the first element is not a string, it's likely the payload itself.
+            // This might happen for simple acknowledgements or data pushes without an explicit event name.
+            payload = parsedArray[0];
+            // Assign a generic event type based on message type
+            eventType = type === '3' ? 'ack_response' : 'server_data_push';
           }
         } else {
-          eventType = 'ack'; // Empty array, likely an acknowledgement
+          // Empty array, typically an acknowledgement without specific data
+          eventType = 'ack';
           payload = {};
         }
 
-        return { msgId, eventType: eventType || 'unknown', payload };
+        return { msgId, eventType, payload };
       } catch (e) {
         this.emit('log', `Error parsing JSON part of message: ${e}. Original JSON part: ${jsonArrayString}`);
         return null;
@@ -265,6 +228,7 @@ export class WebSocketClient extends CustomEventEmitter {
     if (msgId && this.responseResolvers.has(msgId)) {
       const resolve = this.responseResolvers.get(msgId);
       if (resolve) {
+        // Resolve with the full parsed object, so the caller can inspect eventType and payload
         resolve({ eventType, payload });
         this.responseResolvers.delete(msgId);
       }
