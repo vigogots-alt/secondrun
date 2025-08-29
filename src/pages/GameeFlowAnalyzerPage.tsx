@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { useGameeFlowAnalyzer } from '@/hooks/useGameeFlowAnalyzer';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { EndlessModeControls } from '@/components/EndlessModeControls';
-import { FinancialActions } from '@/components/FinancialActions';
-import { OtherActions } from '@/components/OtherActions';
 import { ConnectionControls } from '@/components/ConnectionControls';
-import { AnalyzerTabs } from '@/components/AnalyzerTabs'; // Import new component
+import { AnalyzerTabs } from '@/components/AnalyzerTabs';
+import { ActionPanels } from '@/components/ActionPanels'; // Import new component
 
 const GameeFlowAnalyzerPage = () => {
   const {
@@ -62,8 +60,6 @@ const GameeFlowAnalyzerPage = () => {
   } = useGameeFlowAnalyzer();
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  // Removed withdrawalAmount, withdrawalFastexId, withdrawalFtnAddress states
-  // as they are now managed internally by FinancialActions.
 
   const handlePlayerSelect = (id: string) => {
     setSelectedPlayerId(id);
@@ -96,48 +92,41 @@ const GameeFlowAnalyzerPage = () => {
         />
 
         {/* Middle Panel: Endless Mode and Other Actions */}
-        <div className="col-span-1 lg:col-span-1 flex flex-col gap-6">
-          <EndlessModeControls
-            isConnected={isConnected}
-            endlessRunning={endlessRunning}
-            endlessDelay={endlessDelay}
-            setEndlessDelay={setEndlessDelay}
-            scoreMultiplier={scoreMultiplier}
-            setScoreMultiplier={setScoreMultiplier}
-            gameId={gameId}
-            setGameId={setGameId}
-            endlessCount={endlessCount}
-            targetVip={targetVip}
-            setTargetVip={setTargetVip}
-            startEndlessSubmission={startEndlessSubmission}
-            stopEndlessSubmission={stopEndlessSubmission}
-          />
-
-          <FinancialActions
-            isConnected={isConnected}
-            getRate={getRate}
-            swapTransactions={swapTransactions}
-            collectBonus={collectBonus}
-            payoutFtn={payoutFtn}
-            credentials={credentials} // Pass credentials for initialization
-          />
-
-          <OtherActions
-            isConnected={isConnected}
-            submitGameScore={submitGameScore}
-            startGame={startGame}
-            gameCrash={gameCrash}
-            endGame={endGame}
-            updateSession={updateSession}
-            getLevels={getLevels}
-            getUpgrades={getUpgrades}
-            getFriends={getFriends}
-            getFriendRequests={getFriendRequests}
-            getUserNotification={getUserNotification}
-            userListForFriend={userListForFriend}
-            deleteAccount={deleteAccount}
-          />
-        </div>
+        <ActionPanels
+          isConnected={isConnected}
+          vipCoin={vipCoin}
+          chips={chips}
+          ftnBalance={ftnBalance}
+          credentials={credentials}
+          endlessRunning={endlessRunning}
+          endlessDelay={endlessDelay}
+          setEndlessDelay={setEndlessDelay}
+          scoreMultiplier={scoreMultiplier}
+          setScoreMultiplier={setScoreMultiplier}
+          gameId={gameId}
+          setGameId={setGameId}
+          endlessCount={endlessCount}
+          targetVip={targetVip}
+          setTargetVip={setTargetVip}
+          startEndlessSubmission={startEndlessSubmission}
+          stopEndlessSubmission={stopEndlessSubmission}
+          startGame={startGame}
+          submitGameScore={submitGameScore}
+          gameCrash={gameCrash}
+          endGame={endGame}
+          updateSession={updateSession}
+          getLevels={getLevels}
+          getUpgrades={getUpgrades}
+          getFriends={getFriends}
+          getFriendRequests={getFriendRequests}
+          getUserNotification={getUserNotification}
+          userListForFriend={userListForFriend}
+          deleteAccount={deleteAccount}
+          getRate={getRate}
+          swapTransactions={swapTransactions}
+          collectBonus={collectBonus}
+          payoutFtn={payoutFtn}
+        />
 
         {/* Right Panel: Tabs for Leaderboards, Changes, History, Log */}
         <div className="col-span-1 lg:col-span-2">
