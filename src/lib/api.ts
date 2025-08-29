@@ -203,7 +203,6 @@ export class WebSocketClient extends CustomEventEmitter {
     }
 
     if (message === '40' + NAMESPACE + ',') { // Socket.IO namespace connected from server
-      // The server sends '40/first-run2,' to confirm namespace connection
       return { eventType: 'namespace_connected', payload: null };
     }
 
@@ -222,27 +221,44 @@ export class WebSocketClient extends CustomEventEmitter {
         let payload: any = {};
 
         if (Array.isArray(parsedArray) && parsedArray.length > 0) {
-          // If the first element is a string, it's the event name
-          if (typeof parsedArray[0] === 'string') {
-            eventType = parsedArray[0];
-            if (parsedArray.length > 1) {
-              // Attempt to parse the second element as JSON if it's a string
-              try {
-                payload = typeof parsedArray[1] === 'string' ? JSON.parse(parsedArray[1]) : parsedArray[1];
-              } catch (e) {
-                // If it fails, treat it as a literal string or other type
-                payload = parsedArray[1];
-              }
+            let firstElement = parsedArray[0];
+
+            // Try to parse the first element if it's a string, as it might be a nested JSON string
+            if (typeof firstElement === 'string') {
+                try {
+                    const nestedParsed = JSON.parse(firstElement);
+                    // If nested parse is successful, it's likely the actual payload
+                    firstElement = nestedParsed;
+                } catch (e) {
+                    // Not a nested JSON string, keep as is
+                }
             }
-          } else {
-            // If the first element is not a string, it's likely the payload itself
-            payload = parsedArray[0];
-            eventType = type === '3' ? 'ack_response' : 'server_data_push'; // Generic event types
-          }
+
+            // Now, determine eventType and payload based on the (potentially re-parsed) firstElement
+            if (typeof firstElement === 'string') {
+                // This is typically for server-initiated messages like ["event_name", payload]
+                // Or for responses where the event name is explicitly the first element
+                eventType = firstElement;
+                if (parsedArray.length > 1) {
+                    payload = parsedArray[1];
+                    // Also try to parse the second element if it's a string
+                    if (typeof payload === 'string') {
+                        try {
+                            payload = JSON.parse(payload);
+                        } catch (e) { /* ignore */ }
+                    }
+                }
+            } else {
+                // This is for responses like ["{\"user\":{...}}"] (after re-parsing firstElement)
+                // or server-initiated like [{payload_object}]
+                // The actual eventType for responses will be taken from responseResolvers in handleMessage
+                // For server-initiated, we can use a generic type.
+                eventType = (type === '3' && msgId) ? 'ack_response' : 'server_data_push';
+                payload = firstElement;
+            }
         } else {
-          // Empty array, typically an acknowledgement without specific data
-          eventType = 'ack';
-          payload = {};
+            eventType = 'ack';
+            payload = {};
         }
 
         return { msgId, eventType, payload };
@@ -289,14 +305,18 @@ export class WebSocketClient extends CustomEventEmitter {
     if (msgId && this.responseResolvers.has(msgId)) {
       const resolverEntry = this.responseResolvers.get(msgId);
       if (resolverEntry) {
-        resolverEntry.resolve({ eventType, payload });
+        // Use the original event type from the resolver, and the already parsed payload
+        resolverEntry.resolve({ eventType: resolverEntry.originalEventType, payload: payload });
         this.responseResolvers.delete(msgId);
       }
     }
 
     // Emit a generic 'message' event and specific event types
-    this.emit('message', { msgId, eventType, payload });
-    this.emit(eventType, payload); // Emit specific event type
+    // Only emit if it's not an 'ack_response' that was already handled by a resolver
+    if (!(msgId && eventType === 'ack_response')) {
+        this.emit('message', { msgId, eventType, payload });
+        this.emit(eventType, payload); // Emit specific event type
+    }
   }
 }
 
