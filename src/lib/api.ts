@@ -34,7 +34,8 @@ const NAMESPACE = '/first-run2'; // Corresponds to '40/first-run2' and '42/first
 export class WebSocketClient extends CustomEventEmitter {
   private ws: WebSocket | null = null;
   private messageId: number = 1;
-  private isConnected: boolean = false;
+  private isConnected: boolean = false; // WebSocket connection status
+  private engineIoConnected: boolean = false; // Engine.IO handshake status
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private responseResolvers: Map<string, (value: any) => void> = new Map();
 
@@ -52,14 +53,14 @@ export class WebSocketClient extends CustomEventEmitter {
 
       this.emit('log', 'Attempting to connect to WebSocket...');
       this.ws = new WebSocket(WS_URL);
+      this.engineIoConnected = false; // Reset Engine.IO handshake status
 
       this.ws.onopen = () => {
         this.isConnected = true;
         this.emit('log', 'WebSocket connected.');
         this.emit('status', true);
-        this.sendRaw('40' + NAMESPACE); // Initial namespace connection
-        this.startPingPong();
-        resolve();
+        // Do NOT send namespace connect here. Wait for Engine.IO handshake.
+        resolve(); // Resolve the promise that the raw WebSocket is open
       };
 
       this.ws.onmessage = (event) => {
@@ -72,6 +73,7 @@ export class WebSocketClient extends CustomEventEmitter {
         this.emit('log', `WebSocket error: ${error}`);
         this.emit('error', error);
         this.isConnected = false;
+        this.engineIoConnected = false;
         this.emit('status', false);
         this.stopPingPong();
         reject(error);
@@ -80,6 +82,7 @@ export class WebSocketClient extends CustomEventEmitter {
       this.ws.onclose = () => {
         this.emit('log', 'WebSocket disconnected.');
         this.isConnected = false;
+        this.engineIoConnected = false;
         this.emit('status', false);
         this.stopPingPong();
       };
@@ -92,6 +95,7 @@ export class WebSocketClient extends CustomEventEmitter {
       this.ws.close();
       this.ws = null;
       this.isConnected = false;
+      this.engineIoConnected = false;
       this.emit('status', false);
       this.stopPingPong();
     }
@@ -124,8 +128,8 @@ export class WebSocketClient extends CustomEventEmitter {
 
   sendMessage(eventType: string, payload: any, waitForResponse: boolean = false): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (!this.isConnected || !this.ws) {
-        reject(new Error('WebSocket is not connected.'));
+      if (!this.isConnected || !this.engineIoConnected || !this.ws) {
+        reject(new Error('WebSocket is not fully connected (Engine.IO handshake not complete).'));
         return;
       }
 
@@ -153,7 +157,7 @@ export class WebSocketClient extends CustomEventEmitter {
       return { eventType: 'pong', payload: null };
     }
 
-    if (message.startsWith('0{')) { // Initial connect data
+    if (message.startsWith('0{')) { // Initial Engine.IO connect data
       try {
         const data = JSON.parse(message.substring(1));
         return { eventType: 'initial_connect', payload: data };
@@ -163,7 +167,11 @@ export class WebSocketClient extends CustomEventEmitter {
       }
     }
 
-    if (message === '40' + NAMESPACE + ',') { // Namespace connected
+    if (message === '40') { // Engine.IO upgrade/ack
+      return { eventType: 'engineio_ack', payload: null };
+    }
+
+    if (message === '40' + NAMESPACE + ',') { // Socket.IO namespace connected
       return { eventType: 'namespace_connected', payload: null };
     }
 
@@ -223,6 +231,16 @@ export class WebSocketClient extends CustomEventEmitter {
     }
 
     const { msgId, eventType, payload } = parsed;
+
+    // Handle Engine.IO handshake sequence
+    if (eventType === 'initial_connect' && !this.engineIoConnected) {
+      this.emit('initial_connect', payload);
+      this.sendRaw('40'); // Acknowledge Engine.IO handshake
+      this.sendRaw('40' + NAMESPACE); // Connect to Socket.IO namespace
+      this.engineIoConnected = true;
+      this.startPingPong();
+      return; // Do not process further as a regular message
+    }
 
     // If there's a resolver for this message ID, resolve it
     if (msgId && this.responseResolvers.has(msgId)) {
