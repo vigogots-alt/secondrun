@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useGameeFlowAnalyzer } from '@/hooks/useGameeFlowAnalyzer';
-import { MadeWithDyad } from '@/components/made-with-dyad';
+import MadeWithDyad from '../components/made-with-dyad.tsx'; // Updated import
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ConnectionControls } from '@/components/ConnectionControls';
 import { AnalyzerTabs } from '@/components/AnalyzerTabs';
-import { ActionPanels } from '@/components/ActionPanels'; // Import new component
+import { ActionPanels } from '@/components/ActionPanels';
 
 const GameeFlowAnalyzerPage = () => {
   const {

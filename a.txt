@@ -1,0 +1,351 @@
+vot primer gde ya otkril realnuyu igru na ustroystve , nabiral login i parol i zaxadil v igru . igral odin raund i sobiral 22 monet i zaxvatil ves trafik spomoshyu mitmproxy . xochu simulirovat tu deystviyu gde sobiralos 22 monet . WebSocket 99 Messages 2025-08-29 22:18:34.015
+
+EngineIO.OPEN {"sid":"xWjYE0lxYrztdk_3hFBr","upgrades":[],"pingInterval":25000,"pingTimeout":5000}
+
+2025-08-29 22:18:34.016
+
+SocketIO.CONNECT
+
+2025-08-29 22:18:34.118
+
+SocketIO.CONNECT /first-run2
+
+2025-08-29 22:18:34.119 2025-08-29 22:18:34.215
+
+SocketIO.CONNECT /first-run2,
+
+2025-08-29 22:18:34.217 2025-08-29 22:18:48.549
+
+SocketIO.EVENT /first-run2,1["auth", "{\"login\":\"8888\",\"password\":\"8888\",\"userName\":null,\"provider\":1,\"versionNumber\":\"2.1.5\",\"fbToken\":null,\"appleData\":null,\"googleData\":null,\"udid\":\"13057886-D3B2-4790-ACC8-8A5D902B5789\",\"platform\":0,\"language\":0,\"logInType\":0,\"guestToken\":null}"]
+
+2025-08-29 22:18:49.249 2025-08-29 22:18:49.350
+
+SocketIO.EVENT /first-run2,["action", "{\"request\":\"updateSession\"}"]
+
+2025-08-29 22:18:49.450
+
+SocketIO.CONNECT_ERROR /first-run2,{}
+
+2025-08-29 22:18:53.884
+
+SocketIO.EVENT /first-run2,2["action", "{\"request\":\"getLevels\"}"]
+
+2025-08-29 22:18:53.959
+
+SocketIO.EVENT /first-run2,3["action", "{\"request\":\"getLeaderBoardPlayers\",\"data\":{\"leaderBoardId\":16}}"]
+
+2025-08-29 22:18:53.963
+
+SocketIO.EVENT /first-run2,4["action", "{\"request\":\"getUpgrades\",\"data\":{\"type\":0}}"]
+
+2025-08-29 22:18:53.966
+
+SocketIO.EVENT /first-run2,5["action", "{\"request\":\"getUpgrades\",\"data\":{\"type\":1}}"]
+
+2025-08-29 22:18:54.061 2025-08-29 22:18:54.265 2025-08-29 22:18:54.271 2025-08-29 22:18:54.276 2025-08-29 22:18:57.560
+
+SocketIO.EVENT /first-run2,6["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104711,\"index\":0,\"indexTime\":\"29.08.2025 22:18:57\",\"syncState\":false,\"hash\":\"f582b6d9b66d9a54fbae894e0d9bea5e094600b29fcd421565467f0bf51ac366\",\"ftn\":\"0\",\"score\":0}}"]
+
+2025-08-29 22:18:57.970
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":\"1244777\",\"profile\":{\"playerId\":\"1244777\",\"gameId\":\"7\",\"aliensId\":\"0\",\"token\":\"4ea92b3ce1d664d4301e6f945a36093e463c7f75862766392e99ecf3cc17eae7\",\"nickName\":\"8888\",\"chips\":7817,\"gems\":0,\"vipCoin\":104711,\"ftnBalance\":0,\"loginType\":0,\"picture\":null,\"level\":12,\"xp\":12711,\"vipStatus\":\"0\",\"vipExpDay\":null,\"country\":\"AM\",\"blockChat\":\"0\",\"state\":\"Yerevan\",\"gender\":\"0\",\"tourWinner\":\"0\",\"challengeWinner\":\"0\",\"leaderBoardWinner\":\"0\",\"topWin\":\"0\",\"averageWin\":0,\"unlockStatuses\":\"0\",\"statusesCount\":0,\"quizzesCount\":0,\"scanTime\":\"0\",\"scanTimeExpire\":0,\"scanRadius\":\"0\",\"scanRadiusExpire\":0,\"extraScan\":\"0\",\"userAction\":0,\"GiftCoinsAmount\":[{\"type\":1,\"amount\":5000,\"isUsed\":0}],\"nextScanTime\":0}}"]
+
+2025-08-29 22:18:57.971 2025-08-29 22:18:59.098
+
+SocketIO.EVENT /first-run2,7["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104711,\"index\":1,\"indexTime\":\"29.08.2025 22:18:58\",\"syncState\":true,\"hash\":\"85301a6088666a275c2738f54fc9f3724c8bbc8b945631daa775059f97fd8a8f\",\"ftn\":\"0\",\"score\":0}}"]
+
+2025-08-29 22:18:59.179 2025-08-29 22:18:59.191
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7817,\"vipCoin\":104711,\"level\":12}}"]
+
+2025-08-29 22:18:59.505 2025-08-29 22:19:00.231
+
+SocketIO.EVENT /first-run2,8["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104711,\"index\":2,\"indexTime\":\"29.08.2025 22:19:00\",\"syncState\":true,\"hash\":\"6e8bb05d887d46f252db9a68c73c05587856a8bdd5ae34aa58d8acd15f49fa46\",\"ftn\":\"0\",\"score\":9}}"]
+
+2025-08-29 22:19:00.427
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7817,\"vipCoin\":104720,\"level\":12}}"]
+
+2025-08-29 22:19:01.246
+
+SocketIO.EVENT /first-run2,9["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104720,\"index\":3,\"indexTime\":\"29.08.2025 22:19:01\",\"syncState\":true,\"hash\":\"b7f1f75b470ec16eb7e9ebecef15e04b8c7596a78ea1db6cb0fc1b0053b5d3e4\",\"ftn\":\"0\",\"score\":22}}"]
+
+2025-08-29 22:19:01.361
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7817,\"vipCoin\":104733,\"level\":12}}"]
+
+2025-08-29 22:19:02.373
+
+SocketIO.EVENT /first-run2,10["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104733,\"index\":4,\"indexTime\":\"29.08.2025 22:19:02\",\"syncState\":true,\"hash\":\"10def8009479d28db055dfd2e9cc33059901e1d1224f3d10b037d62de5d91a83\",\"ftn\":\"0\",\"score\":32}}"]
+
+2025-08-29 22:19:02.680
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7817,\"vipCoin\":104743,\"level\":12}}"]
+
+2025-08-29 22:19:03.396
+
+SocketIO.EVENT /first-run2,11["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104743,\"index\":5,\"indexTime\":\"29.08.2025 22:19:03\",\"syncState\":true,\"hash\":\"95a0995866019dbf6befcd0d14d0bb6b5914f35d245b1c7fe2dcc729f7d8eef0\",\"ftn\":\"0\",\"score\":43}}"]
+
+2025-08-29 22:19:03.601
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7817,\"vipCoin\":104754,\"level\":12}}"]
+
+2025-08-29 22:19:04.318
+
+SocketIO.EVENT /first-run2,12["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104754,\"index\":6,\"indexTime\":\"29.08.2025 22:19:04\",\"syncState\":true,\"hash\":\"fbfb373d5c75dfafb7e2b73a565c9dd1f2f70b19c50e5e9c03a0e0af8507278e\",\"ftn\":\"0\",\"score\":54}}"]
+
+2025-08-29 22:19:04.428
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7817,\"vipCoin\":104765,\"level\":12}}"]
+
+2025-08-29 22:19:04.501
+
+SocketIO.EVENT /first-run2,13["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104765,\"index\":7,\"indexTime\":\"29.08.2025 22:19:04\",\"syncState\":false,\"hash\":\"21f22cfd5f2be87a6c6c16ec3ed42a0c5cb1f1b8bb0f162b3c634507329911db\",\"ftn\":\"0\",\"score\":57}}"]
+
+2025-08-29 22:19:04.625
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7818,\"vipCoin\":104768,\"level\":12}}"]
+
+2025-08-29 22:19:04.932
+
+SocketIO.EVENT /first-run2,14["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104768,\"index\":8,\"indexTime\":\"29.08.2025 22:19:04\",\"syncState\":false,\"hash\":\"09cce816e7696426d4be5c2a45228091e337aab8bec09c358f1cad237887d095\",\"ftn\":\"1\",\"score\":61}}"]
+
+2025-08-29 22:19:05.034
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7819,\"vipCoin\":104772,\"level\":12}}"]
+
+2025-08-29 22:19:05.240
+
+SocketIO.EVENT /first-run2,15["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104772,\"index\":9,\"indexTime\":\"29.08.2025 22:19:05\",\"syncState\":false,\"hash\":\"31ed65068b5af008066a062e5e77c4300e7db9f684e9a1f63b827539faa13794\",\"ftn\":\"2\",\"score\":65}}"]
+
+2025-08-29 22:19:05.241
+
+SocketIO.EVENT /first-run2,16["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104772,\"index\":10,\"indexTime\":\"29.08.2025 22:19:05\",\"syncState\":true,\"hash\":\"18f93f2912860215afbb258263901c2f51e1735a1888291a24432cb3750dd90e\",\"ftn\":\"3\",\"score\":65}}"]
+
+2025-08-29 22:19:05.341
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7820,\"vipCoin\":104776,\"level\":12}}"]
+
+2025-08-29 22:19:05.342
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7820,\"vipCoin\":104776,\"level\":12}}"]
+
+2025-08-29 22:19:05.628
+
+SocketIO.EVENT /first-run2,17["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104776,\"index\":11,\"indexTime\":\"29.08.2025 22:19:05\",\"syncState\":false,\"hash\":\"671da4ced6dfd890f7c6848488b4094f4efd09788d088fa1b9104a4b6a9de955\",\"ftn\":\"3\",\"score\":69}}"]
+
+2025-08-29 22:19:05.752
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7821,\"vipCoin\":104780,\"level\":12}}"]
+
+2025-08-29 22:19:05.957
+
+SocketIO.EVENT /first-run2,18["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104780,\"index\":12,\"indexTime\":\"29.08.2025 22:19:05\",\"syncState\":false,\"hash\":\"515e15360b8a12e841d7b490a830be5599e15cf0625080168cd0e5be8a31722b\",\"ftn\":\"4\",\"score\":73}}"]
+
+2025-08-29 22:19:06.067
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7822,\"vipCoin\":104784,\"level\":12}}"]
+
+2025-08-29 22:19:06.264
+
+SocketIO.EVENT /first-run2,19["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104784,\"index\":13,\"indexTime\":\"29.08.2025 22:19:06\",\"syncState\":true,\"hash\":\"262a1dfef21b65250e8f26985e96b7ab885b6e133bc5e703fa56dc33f1ee83e3\",\"ftn\":\"5\",\"score\":77}}"]
+
+2025-08-29 22:19:06.265
+
+SocketIO.EVENT /first-run2,20["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104784,\"index\":14,\"indexTime\":\"29.08.2025 22:19:06\",\"syncState\":false,\"hash\":\"fe0f515e5216d8aa4409b13a7481eca849eef812796fdbaac18d0a8f4a1aa1f6\",\"ftn\":\"5\",\"score\":77}}"]
+
+2025-08-29 22:19:06.353
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7822,\"vipCoin\":104788,\"level\":12}}"]
+
+2025-08-29 22:19:06.369
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7823,\"vipCoin\":104788,\"level\":12}}"]
+
+2025-08-29 22:19:06.673
+
+SocketIO.EVENT /first-run2,21["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104788,\"index\":15,\"indexTime\":\"29.08.2025 22:19:06\",\"syncState\":false,\"hash\":\"b047b85b9ac88344ec190ef08e4cb210ab56b570d0eef16241a6391e97a55f4b\",\"ftn\":\"6\",\"score\":81}}"]
+
+2025-08-29 22:19:06.783
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7824,\"vipCoin\":104792,\"level\":12}}"]
+
+2025-08-29 22:19:07.185
+
+SocketIO.EVENT /first-run2,22["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104792,\"index\":16,\"indexTime\":\"29.08.2025 22:19:06\",\"syncState\":false,\"hash\":\"37b5311a58ea00c38ae72e55bcafbf5c47929eadb9b1d2962d260765dbb7863f\",\"ftn\":\"7\",\"score\":86}}"]
+
+2025-08-29 22:19:07.266
+
+SocketIO.EVENT /first-run2,23["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104792,\"index\":17,\"indexTime\":\"29.08.2025 22:19:07\",\"syncState\":true,\"hash\":\"d52cd9c293215bbabb4e94239436407c178ac95dcc8bd78b2192e6104e945b2b\",\"ftn\":\"8\",\"score\":88}}"]
+
+2025-08-29 22:19:07.277
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7825,\"vipCoin\":104797,\"level\":12}}"]
+
+2025-08-29 22:19:07.384
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7825,\"vipCoin\":104799,\"level\":12}}"]
+
+2025-08-29 22:19:07.471
+
+SocketIO.EVENT /first-run2,24["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104797,\"index\":18,\"indexTime\":\"29.08.2025 22:19:07\",\"syncState\":false,\"hash\":\"8fd943e69354b85cd1529d4ed4d18ec5a40253af295498afa0485dc80a19eb8b\",\"ftn\":\"8\",\"score\":90}}"]
+
+2025-08-29 22:19:07.595
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7826,\"vipCoin\":104801,\"level\":12}}"]
+
+2025-08-29 22:19:07.799
+
+SocketIO.EVENT /first-run2,25["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104801,\"index\":19,\"indexTime\":\"29.08.2025 22:19:07\",\"syncState\":false,\"hash\":\"02bc43690d5f800d26b1cc3bced3b9c3042bbba86f487e630f83058f12e15c30\",\"ftn\":\"9\",\"score\":94}}"]
+
+2025-08-29 22:19:07.911
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7827,\"vipCoin\":104805,\"level\":12}}"]
+
+2025-08-29 22:19:08.107
+
+SocketIO.EVENT /first-run2,26["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104805,\"index\":20,\"indexTime\":\"29.08.2025 22:19:07\",\"syncState\":false,\"hash\":\"b660cd147f180f60b7bb50282f72caeece43da778efb61a0d76eb3764edc2c6d\",\"ftn\":\"10\",\"score\":98}}"]
+
+2025-08-29 22:19:08.217
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7828,\"vipCoin\":104809,\"level\":12}}"]
+
+2025-08-29 22:19:08.290
+
+SocketIO.EVENT /first-run2,27["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104805,\"index\":21,\"indexTime\":\"29.08.2025 22:19:08\",\"syncState\":true,\"hash\":\"a0446eab5eab3a5ba25a3fd64c78c89283bae77c00679130909fee5a7d489fad\",\"ftn\":\"11\",\"score\":100}}"]
+
+2025-08-29 22:19:08.398
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7828,\"vipCoin\":104811,\"level\":12}}"]
+
+2025-08-29 22:19:08.409
+
+SocketIO.EVENT /first-run2,28["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104809,\"index\":22,\"indexTime\":\"29.08.2025 22:19:08\",\"syncState\":false,\"hash\":\"af5a6e29dcf317e1e8c85b14634b94ad1bf536b67a853896182cbcd250d3f533\",\"ftn\":\"11\",\"score\":102}}"]
+
+2025-08-29 22:19:08.624
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7829,\"vipCoin\":104813,\"level\":12}}"]
+
+2025-08-29 22:19:08.824
+
+SocketIO.EVENT /first-run2,29["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104813,\"index\":23,\"indexTime\":\"29.08.2025 22:19:08\",\"syncState\":false,\"hash\":\"b7042193d8dc15c3578b78400962944f738054694c71443156965b325889c4d1\",\"ftn\":\"12\",\"score\":106}}"]
+
+2025-08-29 22:19:08.935
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7830,\"vipCoin\":104817,\"level\":12}}"]
+
+2025-08-29 22:19:09.131
+
+SocketIO.EVENT /first-run2,30["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104817,\"index\":24,\"indexTime\":\"29.08.2025 22:19:08\",\"syncState\":false,\"hash\":\"4844aaa80a71f1369e98d3b4018821a4f9bb536f514d6e99bc6ae773952764b8\",\"ftn\":\"13\",\"score\":110}}"]
+
+2025-08-29 22:19:09.242
+
+SocketIO.EVENT /first-run2,31["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104817,\"index\":25,\"indexTime\":\"29.08.2025 22:19:09\",\"syncState\":true,\"hash\":\"cd763192dfd88a3d93a4fd1c647cf1d4fb38399bc8915f964e8078ff9a04cf22\",\"ftn\":\"14\",\"score\":112}}"]
+
+2025-08-29 22:19:09.246
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7831,\"vipCoin\":104821,\"level\":12}}"]
+
+2025-08-29 22:19:09.336
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7831,\"vipCoin\":104823,\"level\":12}}"]
+
+2025-08-29 22:19:09.425
+
+SocketIO.EVENT /first-run2,32["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104823,\"index\":26,\"indexTime\":\"29.08.2025 22:19:09\",\"syncState\":false,\"hash\":\"acce3f7b971c058b1131612290ed4fd9fbc73a60124e4bc1fef1309811bdbcdb\",\"ftn\":\"14\",\"score\":114}}"]
+
+2025-08-29 22:19:09.519
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7832,\"vipCoin\":104825,\"level\":12}}"]
+
+2025-08-29 22:19:09.847
+
+SocketIO.EVENT /first-run2,33["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104825,\"index\":27,\"indexTime\":\"29.08.2025 22:19:09\",\"syncState\":false,\"hash\":\"a21f733ae2b5a0d2d47f32ae0e64cc716cd9fb49e0d1ad315934ebf01b581416\",\"ftn\":\"15\",\"score\":118}}"]
+
+2025-08-29 22:19:09.950
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7833,\"vipCoin\":104829,\"level\":12}}"]
+
+2025-08-29 22:19:10.155
+
+SocketIO.EVENT /first-run2,34["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104829,\"index\":28,\"indexTime\":\"29.08.2025 22:19:09\",\"syncState\":false,\"hash\":\"47fbb17f13799eebaa9d934f1bc7f5ab59834cde8345b8a4654a5b65c3aa68b2\",\"ftn\":\"16\",\"score\":122}}"]
+
+2025-08-29 22:19:10.248
+
+SocketIO.EVENT /first-run2,35["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104829,\"index\":29,\"indexTime\":\"29.08.2025 22:19:10\",\"syncState\":true,\"hash\":\"7a3aeda7aa7bd7e95ab7db1114a54b3fadb88467f3153c680f23e910eb198756\",\"ftn\":\"17\",\"score\":124}}"]
+
+2025-08-29 22:19:10.269
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7834,\"vipCoin\":104833,\"level\":12}}"]
+
+2025-08-29 22:19:10.346
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7834,\"vipCoin\":104835,\"level\":12}}"]
+
+2025-08-29 22:19:10.441
+
+SocketIO.EVENT /first-run2,36["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104829,\"index\":30,\"indexTime\":\"29.08.2025 22:19:10\",\"syncState\":false,\"hash\":\"43324be3fc3243661c886f22ff8eac347008b40c89cdac0333b33921991638c0\",\"ftn\":\"17\",\"score\":126}}"]
+
+2025-08-29 22:19:10.564
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7835,\"vipCoin\":104837,\"level\":12}}"]
+
+2025-08-29 22:19:10.769
+
+SocketIO.EVENT /first-run2,37["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104837,\"index\":31,\"indexTime\":\"29.08.2025 22:19:10\",\"syncState\":false,\"hash\":\"d8505a339ea8666365cea3dd340cc31f4d8e933b09bb6ea68cbf35b8462ec82c\",\"ftn\":\"18\",\"score\":130}}"]
+
+2025-08-29 22:19:10.879
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7836,\"vipCoin\":104841,\"level\":12}}"]
+
+2025-08-29 22:19:11.077
+
+SocketIO.EVENT /first-run2,38["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104841,\"index\":32,\"indexTime\":\"29.08.2025 22:19:10\",\"syncState\":false,\"hash\":\"ca7d56fbe2558258f008fd58ccd8946350144568966b9794fd0112c827f2cdc0\",\"ftn\":\"19\",\"score\":134}}"]
+
+2025-08-29 22:19:11.177
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7837,\"vipCoin\":104845,\"level\":12}}"]
+
+2025-08-29 22:19:11.281
+
+SocketIO.EVENT /first-run2,39["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104845,\"index\":33,\"indexTime\":\"29.08.2025 22:19:11\",\"syncState\":true,\"hash\":\"d12f6121edca43f59b72d3d4c2c4beb00b17ba0b30a1965d0f0dfb37832236fb\",\"ftn\":\"20\",\"score\":136}}"]
+
+2025-08-29 22:19:11.384
+
+SocketIO.EVENT /first-run2,40["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104845,\"index\":34,\"indexTime\":\"29.08.2025 22:19:11\",\"syncState\":false,\"hash\":\"279c7115d9ec071f2a3545b25b3cd1e507d95621ce236188c1b2a38e75313e13\",\"ftn\":\"20\",\"score\":138}}"]
+
+2025-08-29 22:19:11.464
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7837,\"vipCoin\":104847,\"level\":12}}"]
+
+2025-08-29 22:19:11.581
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7838,\"vipCoin\":104849,\"level\":12}}"]
+
+2025-08-29 22:19:11.697
+
+SocketIO.EVENT /first-run2,41["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104849,\"index\":35,\"indexTime\":\"29.08.2025 22:19:11\",\"syncState\":false,\"hash\":\"3cb6b203db19cd2eeca1e5260c6635069167d2715a770d5cb92b4152abb05ef0\",\"ftn\":\"21\",\"score\":142}}"]
+
+2025-08-29 22:19:11.895
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7839,\"vipCoin\":104853,\"level\":12}}"]
+
+2025-08-29 22:19:12.305
+
+SocketIO.EVENT /first-run2,42["action", "{\"request\":\"gameScore\",\"data\":{\"startScore\":104853,\"index\":36,\"indexTime\":\"29.08.2025 22:19:12\",\"syncState\":true,\"hash\":\"db6a8990ef4a3d0ea0e1ca8abc2d8c2c4d7ddb93ed450c1b4e1b386374392c60\",\"ftn\":\"22\",\"score\":149}}"]
+
+2025-08-29 22:19:12.414
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7839,\"vipCoin\":104860,\"level\":12}}"]
+
+2025-08-29 22:19:13.636
+
+SocketIO.EVENT /first-run2,43["action", "{\"request\":\"endGame\"}"]
+
+2025-08-29 22:19:13.750
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":1244777,\"profile\":{\"playerId\":1244777,\"chips\":7839,\"vipCoin\":104860,\"level\":12}}"]
+
+2025-08-29 22:19:13.820
+
+SocketIO.EVENT /first-run2,["profileUpdate","{\"playerId\":\"1244777\",\"profile\":{\"playerId\":\"1244777\",\"gameId\":\"7\",\"aliensId\":\"0\",\"token\":\"4ea92b3ce1d664d4301e6f945a36093e463c7f75862766392e99ecf3cc17eae7\",\"nickName\":\"8888\",\"chips\":7839,\"gems\":0,\"vipCoin\":104860,\"ftnBalance\":0,\"loginType\":0,\"picture\":null,\"level\":12,\"xp\":12860,\"vipStatus\":\"0\",\"vipExpDay\":null,\"country\":\"AM\",\"blockChat\":\"0\",\"state\":\"Yerevan\",\"gender\":\"0\",\"tourWinner\":\"0\",\"challengeWinner\":\"0\",\"leaderBoardWinner\":\"0\",\"topWin\":\"0\",\"averageWin\":0,\"unlockStatuses\":\"0\",\"statusesCount\":0,\"quizzesCount\":0,\"scanTime\":\"0\",\"scanTimeExpire\":0,\"scanRadius\":\"0\",\"scanRadiusExpire\":0,\"extraScan\":\"0\",\"userAction\":0,\"GiftCoinsAmount\":[{\"type\":1,\"amount\":5000,\"isUsed\":0}],\"nextScanTime\":0}}"]

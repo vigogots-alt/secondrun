@@ -1,6 +1,6 @@
 // Update this page (the content is just a fallback if you fail to update the page)
 
-import { MadeWithDyad } from "@/components/made-with-dyad";
+import MadeWithDyad from '../components/made-with-dyad.tsx'; // Updated import
 
 const Index = () => {
   return (
