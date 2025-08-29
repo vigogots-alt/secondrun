@@ -36,6 +36,7 @@ export class WebSocketClient extends CustomEventEmitter {
   private messageId: number = 1;
   private isConnected: boolean = false;
   private pingInterval: ReturnType<typeof setInterval> | null = null;
+  private responseResolvers: Map<string, (value: any) => void> = new Map();
 
   constructor() {
     super();
@@ -121,7 +122,7 @@ export class WebSocketClient extends CustomEventEmitter {
     }
   }
 
-  sendMessage(eventType: string, payload: any): Promise<any> {
+  sendMessage(eventType: string, payload: any, waitForResponse: boolean = false): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.isConnected || !this.ws) {
         reject(new Error('WebSocket is not connected.'));
@@ -132,100 +133,146 @@ export class WebSocketClient extends CustomEventEmitter {
       const message = `42${NAMESPACE},${msgId}["${eventType}",${JSON.stringify(payload)}]`;
       this.sendRaw(message);
 
-      // For simplicity, we'll resolve immediately for now.
-      // A more robust solution would involve mapping msgId to a promise resolver.
-      // For this app, the `handleMessage` will emit events that the hook listens to.
-      resolve(null);
+      if (waitForResponse) {
+        this.responseResolvers.set(String(msgId), resolve);
+        // Set a timeout for the response
+        setTimeout(() => {
+          if (this.responseResolvers.has(String(msgId))) {
+            this.responseResolvers.delete(String(msgId));
+            reject(new Error(`Timeout waiting for response to message ID ${msgId}`));
+          }
+        }, 15000); // 15 seconds timeout
+      } else {
+        resolve(null); // Resolve immediately if not waiting for a specific response
+      }
     });
   }
 
-  private handleMessage(message: string) {
+  private determineEvent(payload: any): string {
+    if (typeof payload !== 'object' || payload === null) {
+      return 'unknown';
+    }
+    if ('user' in payload) return 'auth';
+    if ('leaderBoards' in payload) return 'getLeaderBoard';
+    if ('leaderboard' in payload) return 'leaderboard';
+    if ('rate' in payload) return 'getRate';
+    if ('levels' in payload) return 'getLevels';
+    if ('upgrades' in payload) return 'getUpgrades';
+    if ('friends' in payload) return 'getFriends';
+    if ('friendRequests' in payload) return 'getFriendRequests';
+    if ('notifications' in payload || 'userNotifications' in payload) return 'getUserNotification';
+    if ('users' in payload || 'userList' in payload) return 'userListForFriend';
+    if ('deleted' in payload) return 'deleteAccount';
+    if ('swap' in payload || 'transaction' in payload) return 'swapTransactions';
+    if ('bonus' in payload) return 'collectBonus';
+    if ('payout' in payload) return 'payoutFTN';
+    if ('error' in payload) return 'error';
+    if ('profile' in payload) return 'profileUpdate'; // Custom event for profile updates
+    return 'unknown';
+  }
+
+  private parseSocketMessage(message: string): { msgId?: string; eventType: string; payload: any } | null {
     if (message === '3') { // Pong response
-      this.emit('log', 'Received pong.');
-      return;
+      return { eventType: 'pong', payload: null };
     }
 
-    if (message.startsWith('0{')) {
-        try {
-            const data = JSON.parse(message.substring(1));
-            this.emit('initial_connect', data);
-        } catch (e) {
-            this.emit('log', `Error parsing initial connect message: ${e}`);
-        }
-        return;
+    if (message.startsWith('0{')) { // Initial connect data
+      try {
+        const data = JSON.parse(message.substring(1));
+        return { eventType: 'initial_connect', payload: data };
+      } catch (e) {
+        this.emit('log', `Error parsing initial connect message: ${e}`);
+        return null;
+      }
     }
 
-    // Handle Socket.IO namespace connection messages
-    if (message === '40') {
-        this.emit('log', 'Received Socket.IO namespace handshake (40).');
-        // This is the initial handshake for the namespace, not the full connection confirmation
-        return;
+    if (message === '40' + NAMESPACE + ',') { // Namespace connected
+      return { eventType: 'namespace_connected', payload: null };
     }
 
-    if (message === '40' + NAMESPACE + ',') { // Note the comma at the end
-        this.emit('log', `Namespace ${NAMESPACE} connected.`);
-        this.emit('namespace_connected');
-        return;
-    }
-
-    // Regex to capture messages like 42/first-run2,MSG_ID[...JSON_ARRAY_STRING...]
-    // or 43/first-run2,MSG_ID[...JSON_ARRAY_STRING...]
-    const socketIOMessageRegex = /^4[23]\/first-run2,(\d*)(.*)$/;
+    // Regex to capture messages like 43/first-run2,MSG_ID[...JSON_ARRAY_STRING...]
+    // or 42/first-run2,MSG_ID[...JSON_ARRAY_STRING...]
+    const socketIOMessageRegex = /^4([23])\/first-run2,(\d*)(.*)$/;
     const match = message.match(socketIOMessageRegex);
 
     if (match) {
-      const msgId = match[1]; // Can be empty for server-initiated messages
-      const jsonArrayString = match[2]; // This will be the `[...]` part
+      const type = match[1]; // '2' for server-sent, '3' for ack/response
+      const msgId = match[2]; // Can be empty for server-initiated messages
+      const jsonArrayString = match[3]; // This will be the `[...]` part
 
       try {
-        const parsedArray = JSON.parse(jsonArrayString); // e.g., `["auth", {...}]` or `["{\"user\":{...}}"]`
+        const parsedArray = JSON.parse(jsonArrayString);
 
         let eventType: string | undefined;
         let payload: any;
 
         if (Array.isArray(parsedArray) && parsedArray.length > 0) {
-          if (typeof parsedArray[0] === 'string' && parsedArray.length === 2) {
-            // Standard format: ["eventType", payload_object]
-            eventType = parsedArray[0];
-            payload = parsedArray[1];
-          } else if (typeof parsedArray[0] === 'string' && parsedArray.length === 1) {
-            // Special case: ["{\"user\":{...}}"] - a single string element that is itself a JSON string
-            const innerJsonString = parsedArray[0];
-            payload = JSON.parse(innerJsonString); // Parse the inner JSON string
-            
-            // Infer event type based on payload content
-            if (payload && typeof payload === 'object') {
-              if ('user' in payload) {
-                eventType = 'auth';
-              } else if ('leaderBoards' in payload) {
-                eventType = 'getLeaderBoard'; // For the list of leaderboards
-              } else if ('leaderBoard' in payload && 'players' in payload) {
-                eventType = 'leaderboard'; // For individual leaderboard data with players
-              } else {
-                this.emit('log', `Could not infer eventType for single string array payload: ${innerJsonString}`);
-                return;
+          if (type === '3') { // Response to client-sent message
+            if (parsedArray.length === 0) {
+              eventType = 'ack';
+              payload = {};
+            } else if (typeof parsedArray[0] === 'string') {
+              try {
+                // Attempt to parse the first element as JSON
+                const innerPayload = JSON.parse(parsedArray[0]);
+                eventType = this.determineEvent(innerPayload);
+                payload = innerPayload;
+              } catch {
+                // If not JSON, treat as a simple string event type
+                eventType = parsedArray[0];
+                payload = parsedArray.length > 1 ? parsedArray[1] : {};
               }
             } else {
-              this.emit('log', `Could not infer eventType for single string array payload: ${innerJsonString}`);
-              return;
+              // If the first element is not a string, it might be the payload directly
+              eventType = this.determineEvent(parsedArray[0]);
+              payload = parsedArray[0];
             }
-          } else {
-            this.emit('log', `Unhandled array structure in message: ${jsonArrayString}`);
-            return;
+          } else if (type === '2') { // Server-initiated message
+            eventType = parsedArray[0];
+            if (typeof parsedArray[1] === 'string') {
+              // Handle cases like ["profileUpdate", "{\"profile\":{...}}"]
+              payload = JSON.parse(parsedArray[1]);
+            } else {
+              payload = parsedArray[1];
+            }
           }
         } else {
-          this.emit('log', `Parsed message is not a valid array: ${jsonArrayString}`);
-          return;
+          eventType = 'ack'; // Empty array, likely an acknowledgement
+          payload = {};
         }
 
-        this.emit('message', { msgId, eventType, payload });
+        return { msgId, eventType: eventType || 'unknown', payload };
       } catch (e) {
         this.emit('log', `Error parsing JSON part of message: ${e}. Original JSON part: ${jsonArrayString}`);
+        return null;
       }
-      return;
     }
 
     this.emit('log', `Unhandled message format: ${message}`);
+    return null;
+  }
+
+  private handleMessage(message: string) {
+    const parsed = this.parseSocketMessage(message);
+
+    if (!parsed) {
+      return;
+    }
+
+    const { msgId, eventType, payload } = parsed;
+
+    // If there's a resolver for this message ID, resolve it
+    if (msgId && this.responseResolvers.has(msgId)) {
+      const resolve = this.responseResolvers.get(msgId);
+      if (resolve) {
+        resolve({ eventType, payload });
+        this.responseResolvers.delete(msgId);
+      }
+    }
+
+    // Emit a generic 'message' event and specific event types
+    this.emit('message', { msgId, eventType, payload });
+    this.emit(eventType, payload); // Emit specific event type
   }
 }
 
