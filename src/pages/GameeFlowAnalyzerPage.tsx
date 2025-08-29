@@ -62,9 +62,8 @@ const GameeFlowAnalyzerPage = () => {
   } = useGameeFlowAnalyzer();
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [withdrawalAmount, setWithdrawalAmount] = useState(credentials.withdrawal_amount);
-  const [withdrawalFastexId, setWithdrawalFastexId] = useState(credentials.fastex_user_id);
-  const [withdrawalFtnAddress, setWithdrawalFtnAddress] = useState(credentials.ftn_address);
+  // Removed withdrawalAmount, withdrawalFastexId, withdrawalFtnAddress states
+  // as they are now managed internally by FinancialActions.
 
   const handlePlayerSelect = (id: string) => {
     setSelectedPlayerId(id);
@@ -120,12 +119,7 @@ const GameeFlowAnalyzerPage = () => {
             swapTransactions={swapTransactions}
             collectBonus={collectBonus}
             payoutFtn={payoutFtn}
-            withdrawalAmount={withdrawalAmount}
-            setWithdrawalAmount={setWithdrawalAmount}
-            withdrawalFastexId={withdrawalFastexId}
-            setWithdrawalFastexId={setWithdrawalFastexId}
-            withdrawalFtnAddress={withdrawalFtnAddress}
-            setWithdrawalFtnAddress={setWithdrawalFtnAddress}
+            credentials={credentials} // Pass credentials for initialization
           />
 
           <OtherActions

@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+interface Credentials {
+  login: string;
+  password: string;
+  fastex_user_id: string;
+  ftn_address: string;
+  withdrawal_amount: string;
+}
 
 interface FinancialActionsProps {
   isConnected: boolean;
@@ -11,12 +19,7 @@ interface FinancialActionsProps {
   swapTransactions: (amount: string, currency: string) => Promise<void>;
   collectBonus: (bonusId: number) => Promise<void>;
   payoutFtn: (amount: string, fastexUserId: string, ftnAddress: string) => Promise<void>;
-  withdrawalAmount: string;
-  setWithdrawalAmount: (amount: string) => void;
-  withdrawalFastexId: string;
-  setWithdrawalFastexId: (id: string) => void;
-  withdrawalFtnAddress: string;
-  setWithdrawalFtnAddress: (address: string) => void;
+  credentials: Credentials; // Pass credentials to initialize internal state
 }
 
 export const FinancialActions: React.FC<FinancialActionsProps> = ({
@@ -25,16 +28,23 @@ export const FinancialActions: React.FC<FinancialActionsProps> = ({
   swapTransactions,
   collectBonus,
   payoutFtn,
-  withdrawalAmount,
-  setWithdrawalAmount,
-  withdrawalFastexId,
-  setWithdrawalFastexId,
-  withdrawalFtnAddress,
-  setWithdrawalFtnAddress,
+  credentials,
 }) => {
   const [swapAmount, setSwapAmount] = useState('1.0');
   const [swapCurrency, setSwapCurrency] = useState('FTN');
   const [bonusId, setBonusId] = useState(1);
+
+  // Internal states for withdrawal, initialized from credentials
+  const [internalWithdrawalAmount, setInternalWithdrawalAmount] = useState(credentials.withdrawal_amount);
+  const [internalWithdrawalFastexId, setInternalWithdrawalFastexId] = useState(credentials.fastex_user_id);
+  const [internalWithdrawalFtnAddress, setInternalWithdrawalFtnAddress] = useState(credentials.ftn_address);
+
+  // Update internal states if credentials change externally
+  useEffect(() => {
+    setInternalWithdrawalAmount(credentials.withdrawal_amount);
+    setInternalWithdrawalFastexId(credentials.fastex_user_id);
+    setInternalWithdrawalFtnAddress(credentials.ftn_address);
+  }, [credentials]);
 
   const handleSwap = async () => {
     await swapTransactions(swapAmount, swapCurrency);
@@ -45,7 +55,7 @@ export const FinancialActions: React.FC<FinancialActionsProps> = ({
   };
 
   const handlePayoutFtn = async () => {
-    await payoutFtn(withdrawalAmount, withdrawalFastexId, withdrawalFtnAddress);
+    await payoutFtn(internalWithdrawalAmount, internalWithdrawalFastexId, internalWithdrawalFtnAddress);
   };
 
   return (
@@ -114,15 +124,15 @@ export const FinancialActions: React.FC<FinancialActionsProps> = ({
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="withdrawal-amount" className="text-right">Amount</Label>
-                <Input id="withdrawal-amount" value={withdrawalAmount} onChange={(e) => setWithdrawalAmount(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
+                <Input id="withdrawal-amount" value={internalWithdrawalAmount} onChange={(e) => setInternalWithdrawalAmount(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="withdrawal-fastex-id" className="text-right">Fastex User ID</Label>
-                <Input id="withdrawal-fastex-id" value={withdrawalFastexId} onChange={(e) => setWithdrawalFastexId(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
+                <Input id="withdrawal-fastex-id" value={internalWithdrawalFastexId} onChange={(e) => setInternalWithdrawalFastexId(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="withdrawal-ftn-address" className="text-right">FTN Address</Label>
-                <Input id="withdrawal-ftn-address" value={withdrawalFtnAddress} onChange={(e) => setWithdrawalFtnAddress(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
+                <Input id="withdrawal-ftn-address" value={internalWithdrawalFtnAddress} onChange={(e) => setInternalWithdrawalFtnAddress(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
               </div>
             </div>
             <DialogFooter>
