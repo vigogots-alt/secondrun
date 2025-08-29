@@ -105,8 +105,8 @@ export const useLeaderboardAnalyzer = () => {
         setChanges((prevChanges) => [
           ...prevChanges,
           `--- Changes in LB ${lbId} (${new Date().toLocaleTimeString()}) ---`,
-          '', // Add a blank line for separation
           ...currentChanges,
+          '', // Add a blank line for separation
         ]);
       }
       return { ...prev, [lbId]: newPlayers };
@@ -166,6 +166,7 @@ export const useLeaderboardAnalyzer = () => {
       await refreshLeaderboards(); // Refresh after successful auth
     } else if (eventType === 'getLeaderBoard') {
       addLog(`Received getLeaderBoard response: ${JSON.stringify(payload)}`);
+      // Optionally process the list of leaderboards if needed, but for now, we just log.
     } else if (eventType === 'leaderboard') {
       const lb = payload?.leaderBoard || {};
       const players = payload?.players || [];
@@ -181,7 +182,7 @@ export const useLeaderboardAnalyzer = () => {
     } else {
       addLog(`📩 Unhandled event '${eventType}': ${JSON.stringify(payload)}`);
     }
-  }, [addLog, refreshLeaderboards, updateLeaderboardData, detectChanges, updatePlayerHistory]); // Added refreshLeaderboards to dependencies
+  }, [addLog, refreshLeaderboards, updateLeaderboardData, detectChanges, updatePlayerHistory]);
 
   const connect = useCallback(async () => {
     addLog('Connecting...');
@@ -236,7 +237,8 @@ export const useLeaderboardAnalyzer = () => {
     wsClient.on('message', handleWsMessage);
     wsClient.on('error', (err) => addLog(`WS Error: ${err}`));
     wsClient.on('initial_connect', (data) => addLog(`Initial WS connect data: ${JSON.stringify(data)}`));
-    wsClient.on('namespace_connected', () => addLog('Namespace connected.'));
+    // Removed redundant log for 'namespace_connected' as it's handled in api.ts
+    // wsClient.on('namespace_connected', () => addLog('Namespace connected.'));
 
     return () => {
       wsClient.off('log', addLog);
@@ -244,7 +246,8 @@ export const useLeaderboardAnalyzer = () => {
       wsClient.off('message', handleWsMessage);
       wsClient.off('error', (err) => addLog(`WS Error: ${err}`));
       wsClient.off('initial_connect', (data) => addLog(`Initial WS connect data: ${JSON.stringify(data)}`));
-      wsClient.off('namespace_connected', () => addLog('Namespace connected.'));
+      // Removed redundant off for 'namespace_connected'
+      // wsClient.off('namespace_connected', () => addLog('Namespace connected.'));
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);
       }

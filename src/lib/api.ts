@@ -192,9 +192,19 @@ export class WebSocketClient extends CustomEventEmitter {
             // Special case: ["{\"user\":{...}}"] - a single string element that is itself a JSON string
             const innerJsonString = parsedArray[0];
             payload = JSON.parse(innerJsonString); // Parse the inner JSON string
-            // Infer event type if possible, e.g., for 'auth'
-            if (payload && typeof payload === 'object' && 'user' in payload) {
-              eventType = 'auth';
+            
+            // Infer event type based on payload content
+            if (payload && typeof payload === 'object') {
+              if ('user' in payload) {
+                eventType = 'auth';
+              } else if ('leaderBoards' in payload) {
+                eventType = 'getLeaderBoard'; // For the list of leaderboards
+              } else if ('leaderBoard' in payload && 'players' in payload) {
+                eventType = 'leaderboard'; // For individual leaderboard data with players
+              } else {
+                this.emit('log', `Could not infer eventType for single string array payload: ${innerJsonString}`);
+                return;
+              }
             } else {
               this.emit('log', `Could not infer eventType for single string array payload: ${innerJsonString}`);
               return;
