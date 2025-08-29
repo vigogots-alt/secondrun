@@ -145,7 +145,6 @@ export class WebSocketClient extends CustomEventEmitter {
       return;
     }
 
-    // Handle initial connection response (e.g., '0{"sid":"...", ...}')
     if (message.startsWith('0{')) {
         try {
             const data = JSON.parse(message.substring(1));
@@ -156,37 +155,54 @@ export class WebSocketClient extends CustomEventEmitter {
         return;
     }
 
-    // Handle namespace connection response (e.g., '40/first-run2')
     if (message === '40' + NAMESPACE) {
         this.emit('namespace_connected');
         return;
     }
 
-    // Handle standard messages (e.g., '42/first-run2,["auth", {...}]' or '43/first-run2,123["event", {...}]')
-    const match42 = message.match(/^42\/first-run2,(\d*)\["(.*?)",(.*)\]$/);
-    if (match42) {
-      const msgId = match42[1]; // Can be empty for server-initiated messages
-      const eventType = match42[2];
-      const payloadStr = match42[3];
-      try {
-        const payload = JSON.parse(payloadStr);
-        this.emit('message', { msgId, eventType, payload });
-      } catch (e) {
-        this.emit('log', `Error parsing 42 message payload: ${e}`);
-      }
-      return;
-    }
+    // Regex to capture messages like 42/first-run2,MSG_ID[...JSON_ARRAY_STRING...]
+    // or 43/first-run2,MSG_ID[...JSON_ARRAY_STRING...]
+    const socketIOMessageRegex = /^4[23]\/first-run2,(\d*)(.*)$/;
+    const match = message.match(socketIOMessageRegex);
 
-    const match43 = message.match(/^43\/first-run2,(\d+)\["(.*?)",(.*)\]$/);
-    if (match43) {
-      const msgId = match43[1];
-      const eventType = match43[2];
-      const payloadStr = match43[3];
+    if (match) {
+      const msgId = match[1]; // Can be empty for server-initiated messages
+      const jsonArrayString = match[2]; // This will be the `[...]` part
+
       try {
-        const payload = JSON.parse(payloadStr);
+        const parsedArray = JSON.parse(jsonArrayString); // e.g., `["auth", {...}]` or `["{\"user\":{...}}"]`
+
+        let eventType: string | undefined;
+        let payload: any;
+
+        if (Array.isArray(parsedArray) && parsedArray.length > 0) {
+          if (typeof parsedArray[0] === 'string' && parsedArray.length === 2) {
+            // Standard format: ["eventType", payload_object]
+            eventType = parsedArray[0];
+            payload = parsedArray[1];
+          } else if (typeof parsedArray[0] === 'string' && parsedArray.length === 1) {
+            // Special case: ["{\"user\":{...}}"] - a single string element that is itself a JSON string
+            const innerJsonString = parsedArray[0];
+            payload = JSON.parse(innerJsonString); // Parse the inner JSON string
+            // Infer event type if possible, e.g., for 'auth'
+            if (payload && typeof payload === 'object' && 'user' in payload) {
+              eventType = 'auth';
+            } else {
+              this.emit('log', `Could not infer eventType for single string array payload: ${innerJsonString}`);
+              return;
+            }
+          } else {
+            this.emit('log', `Unhandled array structure in message: ${jsonArrayString}`);
+            return;
+          }
+        } else {
+          this.emit('log', `Parsed message is not a valid array: ${jsonArrayString}`);
+          return;
+        }
+
         this.emit('message', { msgId, eventType, payload });
       } catch (e) {
-        this.emit('log', `Error parsing 43 message payload: ${e}`);
+        this.emit('log', `Error parsing JSON part of message: ${e}. Original JSON part: ${jsonArrayString}`);
       }
       return;
     }
