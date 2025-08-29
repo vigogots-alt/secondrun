@@ -112,11 +112,17 @@ export const useAuthAndBalance = ({ addLog }: UseAuthAndBalanceProps): UseAuthAn
     };
 
     const handleProfileUpdateMessage = (payload: any) => {
+      console.log("handleProfileUpdateMessage received payload:", payload); // Debug log
       const profile = payload?.profile || {};
-      setChips(parseFloat(profile.chips || chips));
-      setVipCoin(parseFloat(profile.vipCoin || vipCoin));
-      setFtnBalance(parseFloat(profile.ftnBalance || ftnBalance));
-      addLog(`🔄 Balance update: Chips=${profile.chips}, VIP=${profile.vipCoin}, FTN=${profile.ftnBalance}`);
+      console.log("Parsed profile from payload:", profile); // Debug log
+      const newChips = parseFloat(profile.chips || chips);
+      const newVipCoin = parseFloat(profile.vipCoin || vipCoin);
+      const newFtnBalance = parseFloat(profile.ftnBalance || ftnBalance);
+      
+      setChips(newChips);
+      setVipCoin(newVipCoin);
+      setFtnBalance(newFtnBalance);
+      addLog(`🔄 Balance update: Chips=${newChips}, VIP=${newVipCoin}, FTN=${newFtnBalance}`);
     };
 
     wsClient.on('auth', handleAuthMessage);
