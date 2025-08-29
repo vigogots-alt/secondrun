@@ -37,7 +37,7 @@ export class WebSocketClient extends CustomEventEmitter {
   public isConnected: boolean = false; // WebSocket connection status
   private engineIoConnected: boolean = false; // Engine.IO handshake status
   private pingInterval: ReturnType<typeof setInterval> | null = null;
-  private responseResolvers: Map<string, { resolve: (value: any) => void; originalEventType: string }> = new Map();
+  private responseResolvers: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void; originalEventType: string }> = new Map();
 
   constructor() {
     super();
@@ -59,7 +59,6 @@ export class WebSocketClient extends CustomEventEmitter {
         this.isConnected = true;
         this.emit('log', 'WebSocket connected.');
         this.emit('status', true);
-        // Do NOT send namespace connect here. Wait for Engine.IO handshake.
         resolve(); // Resolve the promise that the raw WebSocket is open
       };
 
@@ -85,6 +84,11 @@ export class WebSocketClient extends CustomEventEmitter {
         this.engineIoConnected = false;
         this.emit('status', false);
         this.stopPingPong();
+        // Reject any pending promises when the connection closes
+        this.responseResolvers.forEach(({ reject }) => {
+          reject(new Error('WebSocket connection closed.'));
+        });
+        this.responseResolvers.clear();
       };
     });
   }
@@ -98,6 +102,11 @@ export class WebSocketClient extends CustomEventEmitter {
       this.engineIoConnected = false;
       this.emit('status', false);
       this.stopPingPong();
+      // Reject any pending promises when explicitly disconnecting
+      this.responseResolvers.forEach(({ reject }) => {
+        reject(new Error('WebSocket explicitly disconnected.'));
+      });
+      this.responseResolvers.clear();
     }
   }
 
@@ -128,8 +137,16 @@ export class WebSocketClient extends CustomEventEmitter {
 
   sendMessage(eventType: string, payload: any, waitForResponse: boolean = false): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (!this.isConnected || !this.engineIoConnected || !this.ws) {
-        reject(new Error('WebSocket is not fully connected (Engine.IO handshake not complete).'));
+      if (!this.isConnected) {
+        reject(new Error('WebSocket is not connected. Please connect first.'));
+        return;
+      }
+      if (!this.engineIoConnected) {
+        reject(new Error('WebSocket is connected but Engine.IO handshake not complete. Please wait.'));
+        return;
+      }
+      if (!this.ws) {
+        reject(new Error('WebSocket instance is null.'));
         return;
       }
 
@@ -138,7 +155,7 @@ export class WebSocketClient extends CustomEventEmitter {
       this.sendRaw(message);
 
       if (waitForResponse) {
-        this.responseResolvers.set(String(msgId), { resolve, originalEventType: eventType });
+        this.responseResolvers.set(String(msgId), { resolve, reject, originalEventType: eventType });
         setTimeout(() => {
           if (this.responseResolvers.has(String(msgId))) {
             this.responseResolvers.delete(String(msgId));
