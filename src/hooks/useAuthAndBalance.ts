@@ -23,7 +23,7 @@ interface UseAuthAndBalanceResult {
   vipCoin: number;
   chips: number;
   ftnBalance: number;
-  authenticate: () => Promise<void>;
+  authenticate: () => Promise<boolean>;
   resetAuthAndBalance: () => void;
 }
 
@@ -49,11 +49,11 @@ export const useAuthAndBalance = ({ isConnected, addLog }: UseAuthAndBalanceProp
     setFtnBalance(0);
   }, []);
 
-  const authenticate = useCallback(async () => {
+  const authenticate = useCallback(async (): Promise<boolean> => {
     if (!isConnected) {
       addLog('Not connected. Cannot authenticate.');
       toast.warning('Not connected. Please connect first.');
-      return;
+      return false;
     }
     addLog('Attempting authentication...');
     try {
@@ -69,7 +69,7 @@ export const useAuthAndBalance = ({ isConnected, addLog }: UseAuthAndBalanceProp
         logInType: 0,
         guestToken: null
       };
-      const response = await wsClient.sendMessage('auth', authPayload, true); // Wait for auth response
+      const response = await wsClient.sendMessage('auth', authPayload, true);
       if (response?.eventType === 'auth') {
         const user = response.payload?.user || {};
         setSessionToken(user.token);
@@ -79,19 +79,23 @@ export const useAuthAndBalance = ({ isConnected, addLog }: UseAuthAndBalanceProp
         setFtnBalance(parseFloat(user.ftnBalance || '0'));
         addLog(`✅ Authenticated as ${user.playerId}. Chips: ${user.chips}, VIP: ${user.vipCoin}, FTN: ${user.ftnBalance}`);
         toast.success(`Authenticated as ${user.playerId}`);
+        return true;
       } else if (response?.eventType === 'error') {
         addLog(`❌ Authentication error: ${JSON.stringify(response.payload)}`);
         toast.error(`Authentication failed: ${JSON.stringify(response.payload?.error || response.payload)}`);
         resetAuthAndBalance();
+        return false;
       } else {
         addLog(`📩 Unexpected auth response: ${JSON.stringify(response)}`);
         toast.error('Authentication failed with unexpected response.');
         resetAuthAndBalance();
+        return false;
       }
     } catch (error) {
       addLog(`Authentication failed: ${error}`);
       toast.error('Failed to authenticate.');
       resetAuthAndBalance();
+      return false;
     }
   }, [isConnected, credentials, addLog, resetAuthAndBalance]);
 
