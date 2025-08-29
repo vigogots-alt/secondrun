@@ -34,7 +34,7 @@ const NAMESPACE = '/first-run2'; // Corresponds to '40/first-run2' and '42/first
 export class WebSocketClient extends CustomEventEmitter {
   private ws: WebSocket | null = null;
   private messageId: number = 1;
-  private isConnected: boolean = false; // WebSocket connection status
+  public isConnected: boolean = false; // WebSocket connection status - CHANGED TO PUBLIC
   private engineIoConnected: boolean = false; // Engine.IO handshake status
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private responseResolvers: Map<string, (value: any) => void> = new Map();

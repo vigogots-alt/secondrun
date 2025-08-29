@@ -27,7 +27,7 @@ export const useGameeFlowAnalyzer = () => {
     ftnBalance,
     authenticate,
     resetAuthAndBalance,
-  } = useAuthAndBalance({ isConnected, addLog });
+  } = useAuthAndBalance({ addLog }); // Removed isConnected from props
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);

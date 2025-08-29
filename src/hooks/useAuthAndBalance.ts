@@ -11,7 +11,6 @@ interface Credentials {
 }
 
 interface UseAuthAndBalanceProps {
-  isConnected: boolean;
   addLog: (message: string) => void;
 }
 
@@ -27,7 +26,7 @@ interface UseAuthAndBalanceResult {
   resetAuthAndBalance: () => void;
 }
 
-export const useAuthAndBalance = ({ isConnected, addLog }: UseAuthAndBalanceProps): UseAuthAndBalanceResult => {
+export const useAuthAndBalance = ({ addLog }: UseAuthAndBalanceProps): UseAuthAndBalanceResult => {
   const [credentials, setCredentials] = useState<Credentials>({
     login: 'bver',
     password: 'bver',
@@ -50,9 +49,10 @@ export const useAuthAndBalance = ({ isConnected, addLog }: UseAuthAndBalanceProp
   }, []);
 
   const authenticate = useCallback(async (): Promise<boolean> => {
-    if (!isConnected) {
-      addLog('Not connected. Cannot authenticate.');
-      toast.warning('Not connected. Please connect first.');
+    // Directly check the wsClient's internal connection status
+    if (!wsClient.isConnected) {
+      addLog('WebSocket client not connected. Cannot authenticate.');
+      toast.warning('WebSocket client not connected. Please connect first.');
       return false;
     }
     addLog('Attempting authentication...');
@@ -97,7 +97,7 @@ export const useAuthAndBalance = ({ isConnected, addLog }: UseAuthAndBalanceProp
       resetAuthAndBalance();
       return false;
     }
-  }, [isConnected, credentials, addLog, resetAuthAndBalance]);
+  }, [credentials, addLog, resetAuthAndBalance]);
 
   useEffect(() => {
     const handleAuthMessage = (payload: any) => {
