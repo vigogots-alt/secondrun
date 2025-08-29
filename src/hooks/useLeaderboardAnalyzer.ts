@@ -255,7 +255,6 @@ export const useLeaderboardAnalyzer = () => {
     return () => {
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);
-      Refresh Leaderboards
       }
     };
   }, [autoRefresh, isConnected, refreshLeaderboards]);
