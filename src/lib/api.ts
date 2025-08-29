@@ -138,13 +138,11 @@ export class WebSocketClient extends CustomEventEmitter {
       this.sendRaw(message);
 
       if (waitForResponse) {
-        // Store the original eventType along with the resolver
         this.responseResolvers.set(String(msgId), { resolve, originalEventType: eventType });
-        // Set a timeout for the response
         setTimeout(() => {
           if (this.responseResolvers.has(String(msgId))) {
             this.responseResolvers.delete(String(msgId));
-            reject(new Error(`Timeout waiting for response to message ID ${msgId}`));
+            reject(new Error(`Timeout waiting for response to message ID ${msgId} for event ${eventType}`));
           }
         }, 15000); // 15 seconds timeout
       } else {
@@ -172,7 +170,7 @@ export class WebSocketClient extends CustomEventEmitter {
       return { eventType: 'engineio_ack', payload: null };
     }
 
-    if (message === '40' + NAMESPACE + ',') { // Socket.IO namespace connected
+    if (message === '40' + NAMESPACE) { // Socket.IO namespace connected
       return { eventType: 'namespace_connected', payload: null };
     }
 
@@ -182,37 +180,31 @@ export class WebSocketClient extends CustomEventEmitter {
     if (match) {
       const type = match[1]; // '2' for server-sent, '3' for ack/response
       const msgId = match[2]; // Can be empty for server-initiated messages
-      const jsonArrayString = match[3];
+      const jsonPart = match[3];
 
       try {
-        const parsedArray = JSON.parse(jsonArrayString);
+        const parsedArray = JSON.parse(jsonPart);
 
         let eventType: string = 'unknown';
         let payload: any = {};
 
         if (Array.isArray(parsedArray) && parsedArray.length > 0) {
-          // Check for the specific problematic format: ["{\"key\":\"value\"}"]
-          // This happens for 'auth' responses where the entire user object is stringified as the first element.
-          if (parsedArray.length === 1 && typeof parsedArray[0] === 'string' && parsedArray[0].startsWith('{') && parsedArray[0].endsWith('}')) {
-            try {
-              payload = JSON.parse(parsedArray[0]);
-              eventType = 'response_payload_only'; // A special internal event type
-            } catch (e) {
-              // If it's not valid JSON, treat it as a regular string event name
-              eventType = parsedArray[0];
-              payload = {};
-            }
-          } else if (typeof parsedArray[0] === 'string') {
-            // Standard Socket.IO event: ["eventName", payload]
+          // If the first element is a string, it's the event name
+          if (typeof parsedArray[0] === 'string') {
             eventType = parsedArray[0];
             if (parsedArray.length > 1) {
-              // Handle cases where payload itself is a JSON string (double-encoded)
-              payload = typeof parsedArray[1] === 'string' ? JSON.parse(parsedArray[1]) : parsedArray[1];
+              // Attempt to parse the second element as JSON if it's a string
+              try {
+                payload = typeof parsedArray[1] === 'string' ? JSON.parse(parsedArray[1]) : parsedArray[1];
+              } catch (e) {
+                // If it fails, treat it as a literal string or other type
+                payload = parsedArray[1];
+              }
             }
           } else {
-            // If the first element is not a string, it's likely the payload itself.
+            // If the first element is not a string, it's likely the payload itself
             payload = parsedArray[0];
-            eventType = type === '3' ? 'ack_response' : 'server_data_push';
+            eventType = type === '3' ? 'ack_response' : 'server_data_push'; // Generic event types
           }
         } else {
           // Empty array, typically an acknowledgement without specific data
@@ -222,7 +214,7 @@ export class WebSocketClient extends CustomEventEmitter {
 
         return { msgId, eventType, payload };
       } catch (e) {
-        this.emit('log', `Error parsing JSON part of message: ${e}. Original JSON part: ${jsonArrayString}`);
+        this.emit('log', `Error parsing JSON part of message: ${e}. Original JSON part: ${jsonPart}`);
         return null;
       }
     }
@@ -238,7 +230,7 @@ export class WebSocketClient extends CustomEventEmitter {
       return;
     }
 
-    let { msgId, eventType, payload } = parsed; // Use `let` because eventType might be reassigned
+    const { msgId, eventType, payload } = parsed;
 
     // Handle Engine.IO handshake sequence
     if (eventType === 'initial_connect' && !this.engineIoConnected) {
@@ -247,6 +239,7 @@ export class WebSocketClient extends CustomEventEmitter {
       this.sendRaw('40' + NAMESPACE); // Connect to Socket.IO namespace
       this.engineIoConnected = true;
       this.startPingPong();
+      this.emit('namespace_connected'); // Explicitly emit after sending namespace connect
       return; // Do not process further as a regular message
     }
 
@@ -254,16 +247,8 @@ export class WebSocketClient extends CustomEventEmitter {
     if (msgId && this.responseResolvers.has(msgId)) {
       const resolverEntry = this.responseResolvers.get(msgId);
       if (resolverEntry) {
-        const { resolve, originalEventType } = resolverEntry;
-
-        // If the parsed eventType is our generic 'response_payload_only',
-        // use the original eventType from the request.
-        // This handles the server sending ["{\"user\":{...}}"] for an 'auth' response.
-        if (eventType === 'response_payload_only') {
-          eventType = originalEventType;
-        }
-        
-        resolve({ eventType, payload });
+        // Use the eventType from the parsed message, which is now more accurate
+        resolverEntry.resolve({ eventType, payload });
         this.responseResolvers.delete(msgId);
       }
     }
