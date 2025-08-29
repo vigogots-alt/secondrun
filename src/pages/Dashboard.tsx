@@ -218,7 +218,7 @@ const Dashboard = () => {
                               className={`p-2 rounded-md cursor-pointer hover:bg-muted ${selectedPlayerId === id ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}
                               onClick={() => handlePlayerSelect(id)}
                             >
-                              {id}: {history[0]?.nickName || 'Unknown'}
+                              {history[0]?.nickName || 'Unknown'} (ID: {id})
                             </li>
                           ))
                         ) : (
@@ -229,7 +229,7 @@ const Dashboard = () => {
                     <ScrollArea className="w-2/3 pl-4 bg-background rounded-r-md">
                       {selectedPlayerId && playerHistory[selectedPlayerId] ? (
                         <div>
-                          <h3 className="text-lg font-semibold mb-2">History for Player ID: {selectedPlayerId}</h3>
+                          <h3 className="text-lg font-semibold mb-2">History for Player: {playerHistory[selectedPlayerId][0]?.nickName || selectedPlayerId}</h3>
                           {playerHistory[selectedPlayerId].map((entry, index) => (
                             <p key={index} className="mb-1 text-sm font-mono">
                               {entry.time}: Pts={entry.points}, Chips={entry.chips}, Lvl={entry.level}, XP={entry.xp}
