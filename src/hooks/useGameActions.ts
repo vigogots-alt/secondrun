@@ -63,7 +63,8 @@ export const useGameActions = ({
 
       let response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
 
-      if (response?.eventType === 'error' && response.payload?.code === 33) {
+      // Check for error code 33 first for retry logic
+      if (response?.payload?.error?.code === 33) {
         addLog('Received error code 33, retrying with updated startScore...');
         // Get updated VIP coin for the retry
         currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
@@ -76,23 +77,14 @@ export const useGameActions = ({
         
         // Attempt retry
         response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
-        
-        // Check response from retry
-        if (response?.eventType === 'error') {
-          addLog(`Retry failed: ${JSON.stringify(response.payload)}`);
-          toast.error(`Failed to submit score after retry: ${JSON.stringify(response.payload?.error || response.payload)}`);
-          return; // Exit if retry also failed
-        }
       }
 
-      // If we reach here, either initial submission was successful, or retry was successful
-      if (response?.eventType !== 'error') {
-        toast.success(`Score ${score} submitted.`);
+      // After initial attempt or retry, check if there's an error in the payload
+      if (response?.payload?.error) {
+        addLog(`Failed to submit score: ${JSON.stringify(response.payload.error)}`);
+        toast.error(`Failed to submit score: ${JSON.stringify(response.payload.error?.message || response.payload.error)}`);
       } else {
-        // This case should ideally be caught by the 'if (response?.eventType === 'error')' block above
-        // but as a fallback, if an error somehow slips through without code 33
-        addLog(`Failed to submit score: ${JSON.stringify(response.payload)}`);
-        toast.error(`Failed to submit score: ${JSON.stringify(response.payload?.error || response.payload)}`);
+        toast.success(`Score ${score} submitted.`);
       }
 
     } catch (error) {
