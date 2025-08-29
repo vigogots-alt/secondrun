@@ -28,15 +28,7 @@ export const useWebSocketConnection = (): UseWebSocketConnectionResult => {
     setIsConnecting(true);
     addLog('Connecting...');
     try {
-      await wsClient.connect();
-      // Wait for namespace connection before proceeding with auth
-      await new Promise<void>((resolve) => {
-        const onNamespaceConnected = () => {
-          wsClient.off('namespace_connected', onNamespaceConnected);
-          resolve();
-        };
-        wsClient.on('namespace_connected', onNamespaceConnected);
-      });
+      await wsClient.connect(); // This now waits for full Engine.IO and namespace connection
       addLog('WebSocket connected and namespace established.');
     } catch (error) {
       addLog(`Connection failed: ${error}`);

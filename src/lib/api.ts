@@ -38,6 +38,8 @@ export class WebSocketClient extends CustomEventEmitter {
   private engineIoConnected: boolean = false; // Engine.IO handshake status
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private responseResolvers: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void; originalEventType: string }> = new Map();
+  private namespaceConnectResolver: { resolve: () => void; reject: (reason?: any) => void } | null = null;
+
 
   constructor() {
     super();
@@ -46,20 +48,26 @@ export class WebSocketClient extends CustomEventEmitter {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-        this.emit('log', 'Already connected or connecting.');
-        resolve();
+        if (this.engineIoConnected) {
+          this.emit('log', 'Already fully connected.');
+          resolve();
+        } else {
+          this.emit('log', 'WebSocket connected, waiting for Engine.IO handshake.');
+          this.namespaceConnectResolver = { resolve, reject };
+        }
         return;
       }
 
       this.emit('log', 'Attempting to connect to WebSocket...');
       this.ws = new WebSocket(WS_URL);
       this.engineIoConnected = false; // Reset Engine.IO handshake status
+      this.namespaceConnectResolver = { resolve, reject }; // Set resolver for this connection attempt
 
       this.ws.onopen = () => {
         this.isConnected = true;
         this.emit('log', 'WebSocket connected.');
         this.emit('status', true);
-        resolve(); // Resolve the promise that the raw WebSocket is open
+        // Do NOT resolve here. Wait for Engine.IO handshake and namespace connect.
       };
 
       this.ws.onmessage = (event) => {
@@ -75,7 +83,9 @@ export class WebSocketClient extends CustomEventEmitter {
         this.engineIoConnected = false;
         this.emit('status', false);
         this.stopPingPong();
-        reject(error);
+        this.namespaceConnectResolver?.reject(error); // Reject the main connect promise
+        this.namespaceConnectResolver = null;
+        reject(error); // Also reject the promise returned by this call
       };
 
       this.ws.onclose = () => {
@@ -89,6 +99,8 @@ export class WebSocketClient extends CustomEventEmitter {
           reject(new Error('WebSocket connection closed.'));
         });
         this.responseResolvers.clear();
+        this.namespaceConnectResolver?.reject(new Error('WebSocket connection closed.')); // Reject the main connect promise
+        this.namespaceConnectResolver = null;
       };
     });
   }
@@ -107,6 +119,8 @@ export class WebSocketClient extends CustomEventEmitter {
         reject(new Error('WebSocket explicitly disconnected.'));
       });
       this.responseResolvers.clear();
+      this.namespaceConnectResolver?.reject(new Error('WebSocket explicitly disconnected.')); // Reject the main connect promise
+      this.namespaceConnectResolver = null;
     }
   }
 
@@ -253,18 +267,29 @@ export class WebSocketClient extends CustomEventEmitter {
     if (eventType === 'initial_connect' && !this.engineIoConnected) {
       this.emit('initial_connect', payload);
       this.sendRaw('40'); // Acknowledge Engine.IO handshake
+      // Do NOT send '40/first-run2' here. It's handled by the 'engineio_ack'
+      return;
+    }
+
+    if (eventType === 'engineio_ack' && !this.engineIoConnected) {
       this.sendRaw('40' + NAMESPACE); // Connect to Socket.IO namespace
+      // The 'namespace_connected' event will be emitted when the server responds to this.
+      return;
+    }
+
+    if (eventType === 'namespace_connected' && !this.engineIoConnected) {
       this.engineIoConnected = true;
       this.startPingPong();
-      this.emit('namespace_connected'); // Explicitly emit after sending namespace connect
-      return; // Do not process further as a regular message
+      this.emit('namespace_connected'); // Emit to external listeners
+      this.namespaceConnectResolver?.resolve(); // Resolve the main connect promise
+      this.namespaceConnectResolver = null;
+      return;
     }
 
     // If there's a resolver for this message ID, resolve it
     if (msgId && this.responseResolvers.has(msgId)) {
       const resolverEntry = this.responseResolvers.get(msgId);
       if (resolverEntry) {
-        // Use the eventType from the parsed message, which is now more accurate
         resolverEntry.resolve({ eventType, payload });
         this.responseResolvers.delete(msgId);
       }
