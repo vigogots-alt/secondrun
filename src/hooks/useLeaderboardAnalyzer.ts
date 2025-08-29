@@ -30,7 +30,7 @@ interface PlayerHistoryEntry {
   chips: number;
   level: number;
   xp: number;
-  nickName: string; // Added nickName to history entry
+  nickName: string;
 }
 
 interface Credentials {
@@ -40,6 +40,8 @@ interface Credentials {
 
 export const useLeaderboardAnalyzer = () => {
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false); // New loading state
+  const [isRefreshing, setIsRefreshing] = useState(false); // New loading state
   const [logs, setLogs] = useState<string[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<Record<number, LeaderboardData>>({});
   const [previousLeaderboardData, setPreviousLeaderboardData] = useState<Record<number, Player[]>>({});
@@ -127,7 +129,7 @@ export const useLeaderboardAnalyzer = () => {
           chips: p.chips,
           level: p.level,
           xp: p.xp,
-          nickName: p.nickName, // Include nickName here
+          nickName: p.nickName,
         };
         // Only add if different from the last entry
         if (newHistory[pid].length === 0 || JSON.stringify(newHistory[pid][newHistory[pid].length - 1]) !== JSON.stringify(entry)) {
@@ -144,16 +146,23 @@ export const useLeaderboardAnalyzer = () => {
       toast.warning('Not connected. Please connect first.');
       return;
     }
+    setIsRefreshing(true); // Set loading state
     addLog('Refreshing leaderboards...');
-    // Request all available leaderboards (though we only process specific IDs)
-    await wsClient.sendMessage('action', { request: 'getLeaderBoard', data: null });
-    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
+    try {
+      await wsClient.sendMessage('action', { request: 'getLeaderBoard', data: null });
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
 
-    for (const lbId of leaderboardIds) {
-      await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
-      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between requests
+      for (const lbId of leaderboardIds) {
+        await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
+        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between requests
+      }
+      toast.success('Leaderboards refreshed.');
+    } catch (error) {
+      addLog(`Failed to refresh leaderboards: ${error}`);
+      toast.error('Failed to refresh leaderboards.');
+    } finally {
+      setIsRefreshing(false); // Clear loading state
     }
-    toast.success('Leaderboards refreshed.');
   }, [isConnected, addLog, leaderboardIds]);
 
   const handleWsMessage = useCallback(async ({ eventType, payload }: { msgId: string, eventType: string, payload: any }) => {
@@ -165,11 +174,18 @@ export const useLeaderboardAnalyzer = () => {
       toast.success(`Authenticated as ${user.playerId}`);
       await refreshLeaderboards(); // Refresh after successful auth
     } else if (eventType === 'getLeaderBoard') {
-      addLog(`Received getLeaderBoard response: ${JSON.stringify(payload)}`);
-      // Optionally process the list of leaderboards if needed, but for now, we just log.
+      const leaderBoardsList = payload?.leaderBoards || [];
+      addLog(`Received list of leaderboards: ${leaderBoardsList.map((lb: any) => lb.name).join(', ')}`);
     } else if (eventType === 'leaderboard') {
       const lb = payload?.leaderBoard || {};
-      const players = payload?.players || [];
+      // Parse player data to numbers
+      const players = (payload?.players || []).map((p: any) => ({
+        ...p,
+        level: parseFloat(p.level || '0'),
+        xp: parseFloat(p.xp || '0'),
+        points: parseFloat(p.points || '0'),
+        chips: parseFloat(p.chips || '0'),
+      }));
       const lbId = parseInt(lb.id);
       const timestamp = new Date().toLocaleString();
 
@@ -185,11 +201,11 @@ export const useLeaderboardAnalyzer = () => {
   }, [addLog, refreshLeaderboards, updateLeaderboardData, detectChanges, updatePlayerHistory]);
 
   const connect = useCallback(async () => {
+    setIsConnecting(true); // Set loading state
     addLog('Connecting...');
     try {
       await wsClient.connect();
 
-      // Wait for the namespace to be connected before sending auth
       await new Promise<void>((resolve) => {
         const onNamespaceConnected = () => {
           wsClient.off('namespace_connected', onNamespaceConnected);
@@ -198,7 +214,6 @@ export const useLeaderboardAnalyzer = () => {
         wsClient.on('namespace_connected', onNamespaceConnected);
       });
 
-      // After successful connection and namespace connection, send auth request
       const authPayload = {
         login: credentials.login,
         password: credentials.password,
@@ -215,6 +230,8 @@ export const useLeaderboardAnalyzer = () => {
     } catch (error) {
       addLog(`Connection failed: ${error}`);
       toast.error('Failed to connect to WebSocket.');
+    } finally {
+      setIsConnecting(false); // Clear loading state
     }
   }, [addLog, credentials]);
 
@@ -237,8 +254,6 @@ export const useLeaderboardAnalyzer = () => {
     wsClient.on('message', handleWsMessage);
     wsClient.on('error', (err) => addLog(`WS Error: ${err}`));
     wsClient.on('initial_connect', (data) => addLog(`Initial WS connect data: ${JSON.stringify(data)}`));
-    // Removed redundant log for 'namespace_connected' as it's handled in api.ts
-    // wsClient.on('namespace_connected', () => addLog('Namespace connected.'));
 
     return () => {
       wsClient.off('log', addLog);
@@ -246,8 +261,6 @@ export const useLeaderboardAnalyzer = () => {
       wsClient.off('message', handleWsMessage);
       wsClient.off('error', (err) => addLog(`WS Error: ${err}`));
       wsClient.off('initial_connect', (data) => addLog(`Initial WS connect data: ${JSON.stringify(data)}`));
-      // Removed redundant off for 'namespace_connected'
-      // wsClient.off('namespace_connected', () => addLog('Namespace connected.'));
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);
       }
@@ -279,6 +292,8 @@ export const useLeaderboardAnalyzer = () => {
 
   return {
     isConnected,
+    isConnecting, // Export new state
+    isRefreshing, // Export new state
     logs,
     leaderboardData,
     changes,

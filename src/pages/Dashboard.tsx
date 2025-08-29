@@ -11,11 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { ThemeToggle } from '@/components/ThemeToggle'; // Import the new ThemeToggle component
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Loader2 } from 'lucide-react'; // Import Loader2 icon
 
 const Dashboard = () => {
   const {
     isConnected,
+    isConnecting, // Destructure new state
+    isRefreshing, // Destructure new state
     logs,
     leaderboardData,
     changes,
@@ -41,7 +44,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background text-foreground flex flex-col p-4 md:p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold text-primary-foreground">Leaderboard Analyzer</h1>
-        <ThemeToggle /> {/* Place the ThemeToggle here */}
+        <ThemeToggle />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow">
@@ -52,8 +55,9 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col space-y-2">
-              <Button onClick={connect} disabled={isConnected} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                Connect
+              <Button onClick={connect} disabled={isConnected || isConnecting} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                {isConnecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isConnecting ? "Connecting..." : "Connect"}
               </Button>
               <Button onClick={disconnect} disabled={!isConnected} variant="destructive" className="w-full">
                 Disconnect
@@ -61,8 +65,9 @@ const Dashboard = () => {
             </div>
             <Separator />
             <div className="flex flex-col space-y-2">
-              <Button onClick={refreshLeaderboards} disabled={!isConnected} className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">
-                Refresh Leaderboards
+              <Button onClick={refreshLeaderboards} disabled={!isConnected || isRefreshing} className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">
+                {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isRefreshing ? "Refreshing..." : "Refresh Leaderboards"}
               </Button>
               <div className="flex items-center space-x-2">
                 <Checkbox
