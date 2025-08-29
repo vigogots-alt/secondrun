@@ -7,7 +7,7 @@ interface UseWebSocketConnectionResult {
   isConnecting: boolean;
   logs: string[];
   addLog: (message: string) => void;
-  connect: () => Promise<void>;
+  connect: () => Promise<boolean>; // Изменен тип возвращаемого значения
   disconnect: () => void;
 }
 
@@ -24,15 +24,17 @@ export const useWebSocketConnection = (): UseWebSocketConnectionResult => {
     setLogs((prev) => [...prev, `${timestamp} ${message}`]);
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (): Promise<boolean> => { // Изменен тип возвращаемого значения
     setIsConnecting(true);
     addLog('Connecting...');
     try {
       await wsClient.connect(); // This now waits for full Engine.IO and namespace connection
       addLog('WebSocket connected and namespace established.');
+      return true; // Указываем на успех
     } catch (error) {
       addLog(`Connection failed: ${error}`);
       toast.error('Failed to connect to WebSocket.');
+      return false; // Указываем на ошибку
     } finally {
       setIsConnecting(false);
     }

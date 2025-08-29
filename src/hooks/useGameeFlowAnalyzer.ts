@@ -96,7 +96,8 @@ export const useGameeFlowAnalyzer = () => {
   });
 
   const refreshLeaderboards = useCallback(async () => {
-    if (!isConnected) {
+    // Используем wsClient.isConnected напрямую для немедленной проверки
+    if (!wsClient.isConnected) {
       addLog('Not connected. Cannot refresh leaderboards.');
       toast.warning('Not connected. Please connect first.');
       return;
@@ -118,13 +119,15 @@ export const useGameeFlowAnalyzer = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [isConnected, addLog, leaderboardIds]);
+  }, [addLog, leaderboardIds]);
 
   const connect = useCallback(async () => {
-    await wsConnect();
-    const authSuccess = await authenticate();
-    if (authSuccess) {
-      await refreshLeaderboards();
+    const wsConnected = await wsConnect(); // Получаем статус подключения
+    if (wsConnected) {
+      const authSuccess = await authenticate();
+      if (authSuccess) {
+        await refreshLeaderboards();
+      }
     }
   }, [wsConnect, authenticate, refreshLeaderboards]);
 
@@ -177,13 +180,6 @@ export const useGameeFlowAnalyzer = () => {
     wsClient.on('getLeaderBoard', handleGetLeaderBoardListEvent);
     wsClient.on('error', handleGenericErrorEvent);
 
-    // Other events that might be useful to log but not necessarily update state in this hook
-    // These are typically responses to actions initiated by useGameActions or FinancialActions
-    // and their success/failure is often handled by the sendMessage's Promise resolution.
-    // However, if they are server-initiated or not tied to a specific request,
-    // we might want to log them here. For now, let's keep it minimal.
-    // The `wsClient.on('message')` was too broad.
-
     return () => {
       wsClient.off('leaderboard', handleLeaderboardEvent);
       wsClient.off('getLeaderBoard', handleGetLeaderBoardListEvent);
@@ -192,7 +188,7 @@ export const useGameeFlowAnalyzer = () => {
   }, [handleLeaderboardEvent, handleGetLeaderBoardListEvent, handleGenericErrorEvent]);
 
   useEffect(() => {
-    if (autoRefresh && isConnected) {
+    if (autoRefresh && wsClient.isConnected) { // Используем wsClient.isConnected
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);
       }
@@ -208,7 +204,7 @@ export const useGameeFlowAnalyzer = () => {
         clearInterval(autoRefreshIntervalRef.current);
       }
     };
-  }, [autoRefresh, isConnected, refreshLeaderboards]);
+  }, [autoRefresh, refreshLeaderboards]); // Удален isConnected из зависимостей
 
   const toggleAutoRefresh = useCallback(() => {
     setAutoRefresh((prev) => !prev);
