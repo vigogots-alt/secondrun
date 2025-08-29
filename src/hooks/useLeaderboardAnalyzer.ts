@@ -30,6 +30,7 @@ interface PlayerHistoryEntry {
   chips: number;
   level: number;
   xp: number;
+  nickName: string; // Added nickName to history entry
 }
 
 interface Credentials {
@@ -53,7 +54,10 @@ export const useLeaderboardAnalyzer = () => {
   const leaderboardIds = [21, 18, 19, 20]; // Daily, Weekly, Monthly, Global
 
   const addLog = useCallback((message: string) => {
-    const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+    const timestamp = `${time}.${milliseconds}`;
     setLogs((prev) => [...prev, `${timestamp} ${message}`]);
   }, []);
 
@@ -66,10 +70,6 @@ export const useLeaderboardAnalyzer = () => {
       toast.success(`Authenticated as ${user.playerId}`);
       await refreshLeaderboards(); // Refresh after successful auth
     } else if (eventType === 'getLeaderBoard') {
-      // This event typically returns a list of available leaderboards,
-      // but our current implementation directly requests specific IDs.
-      // If the API changes to require fetching all first, this would be used.
-      // For now, we'll just log it.
       addLog(`Received getLeaderBoard response: ${JSON.stringify(payload)}`);
     } else if (eventType === 'leaderboard') {
       const lb = payload?.leaderBoard || {};
@@ -209,6 +209,7 @@ export const useLeaderboardAnalyzer = () => {
           chips: p.chips,
           level: p.level,
           xp: p.xp,
+          nickName: p.nickName, // Include nickName here
         };
         // Only add if different from the last entry
         if (newHistory[pid].length === 0 || JSON.stringify(newHistory[pid][newHistory[pid].length - 1]) !== JSON.stringify(entry)) {
