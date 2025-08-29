@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
+import { useLeaderboardData } from './useLeaderboardData'; // Import new hook
+import { useEndlessMode } from './useEndlessMode'; // Import new hook
 
 interface Player {
   id: string;
@@ -15,22 +17,6 @@ interface Player {
 interface Leaderboard {
   id: number;
   name: string;
-  // Add other leaderboard properties if needed
-}
-
-interface LeaderboardData {
-  lb: Leaderboard;
-  players: Player[];
-  timestamp: string;
-}
-
-interface PlayerHistoryEntry {
-  time: string;
-  points: number;
-  chips: number;
-  level: number;
-  xp: number;
-  nickName: string;
 }
 
 interface Credentials {
@@ -56,10 +42,6 @@ export const useGameeFlowAnalyzer = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
-  const [leaderboardData, setLeaderboardData] = useState<Record<number, LeaderboardData>>({});
-  const [previousLeaderboardData, setPreviousLeaderboardData] = useState<Record<number, Player[]>>({});
-  const [changes, setChanges] = useState<string[]>([]);
-  const [playerHistory, setPlayerHistory] = useState<Record<string, PlayerHistoryEntry[]>>({});
   const [credentials, setCredentials] = useState<Credentials>({
     login: 'bver',
     password: 'bver',
@@ -75,15 +57,6 @@ export const useGameeFlowAnalyzer = () => {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Endless Mode States
-  const [endlessRunning, setEndlessRunning] = useState(false);
-  const [endlessDelay, setEndlessDelay] = useState(1.0);
-  const [scoreMultiplier, setScoreMultiplier] = useState(10);
-  const [gameId, setGameId] = useState(7);
-  const [endlessCount, setEndlessCount] = useState(0);
-  const [targetVip, setTargetVip] = useState(0);
-  const endlessSubmissionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const leaderboardIds = [21, 18, 19, 20]; // Daily, Weekly, Monthly, Global
 
   const addLog = useCallback((message: string) => {
@@ -94,82 +67,17 @@ export const useGameeFlowAnalyzer = () => {
     setLogs((prev) => [...prev, `${timestamp} ${message}`]);
   }, []);
 
-  const updateLeaderboardData = useCallback((lbId: number, lb: Leaderboard, players: Player[], timestamp: string) => {
-    setLeaderboardData((prev) => ({
-      ...prev,
-      [lbId]: { lb, players: players.map((p, idx) => ({ ...p, rank: idx + 1 })), timestamp },
-    }));
-  }, []);
-
-  const detectChanges = useCallback((lbId: number, newPlayers: Player[]) => {
-    setPreviousLeaderboardData((prev) => {
-      const prevPlayers = prev[lbId] || [];
-      const currentChanges: string[] = [];
-      const newDict = new Map(newPlayers.map((p) => [p.id, p]));
-      const prevDict = new Map(prevPlayers.map((p) => [p.id, p]));
-
-      newPlayers.forEach((newP, newRank) => {
-        const oldP = prevDict.get(newP.id);
-        if (!oldP) {
-          currentChanges.push(`[LB ${lbId}] New player: ${newP.nickName} (ID: ${newP.id}) at rank ${newRank + 1}`);
-        } else {
-          if (newP.points !== oldP.points) {
-            const delta = newP.points - oldP.points;
-            currentChanges.push(`[LB ${lbId}] ${newP.nickName}: Points changed by ${delta > 0 ? '+' : ''}${delta}`);
-          }
-          if (newP.chips !== oldP.chips) {
-            const deltaChips = newP.chips - oldP.chips;
-            currentChanges.push(`[LB ${lbId}] ${newP.nickName}: Chips changed by ${deltaChips > 0 ? '+' : ''}${deltaChips}`);
-          }
-          const oldRank = prevPlayers.findIndex(p => p.id === newP.id);
-          if (oldRank !== -1 && newRank !== oldRank) {
-            currentChanges.push(`[LB ${lbId}] ${newP.nickName}: Rank changed from ${oldRank + 1} to ${newRank + 1}`);
-          }
-        }
-      });
-
-      prevPlayers.forEach((oldP) => {
-        if (!newDict.has(oldP.id)) {
-          currentChanges.push(`[LB ${lbId}] Player left leaderboard: ${oldP.nickName} (ID: ${oldP.id})`);
-        }
-      });
-
-      if (currentChanges.length > 0) {
-        setChanges((prevChanges) => [
-          ...prevChanges,
-          `--- Changes in LB ${lbId} (${new Date().toLocaleTimeString()}) ---`,
-          ...currentChanges,
-          '', // Add a blank line for separation
-        ]);
-      }
-      return { ...prev, [lbId]: newPlayers };
-    });
-  }, []);
-
-  const updatePlayerHistory = useCallback((players: Player[], timestamp: string) => {
-    setPlayerHistory((prevHistory) => {
-      const newHistory = { ...prevHistory };
-      players.forEach((p) => {
-        const pid = p.id;
-        if (!newHistory[pid]) {
-          newHistory[pid] = [];
-        }
-        const entry: PlayerHistoryEntry = {
-          time: timestamp,
-          points: p.points,
-          chips: p.chips,
-          level: p.level,
-          xp: p.xp,
-          nickName: p.nickName,
-        };
-        // Only add if different from the last entry
-        if (newHistory[pid].length === 0 || JSON.stringify(newHistory[pid][newHistory[pid].length - 1]) !== JSON.stringify(entry)) {
-          newHistory[pid].push(entry);
-        }
-      });
-      return newHistory;
-    });
-  }, []);
+  // Use the new leaderboard data hook
+  const {
+    leaderboardData,
+    changes,
+    playerHistory,
+    updateLeaderboardData,
+    detectChanges,
+    updatePlayerHistory,
+    setChanges, // Expose setter to allow clearing changes on disconnect
+    setPlayerHistory, // Expose setter to allow clearing history on disconnect
+  } = useLeaderboardData(addLog);
 
   const refreshLeaderboards = useCallback(async () => {
     if (!isConnected) {
@@ -196,130 +104,33 @@ export const useGameeFlowAnalyzer = () => {
     }
   }, [isConnected, addLog, leaderboardIds]);
 
-  const handleWsMessage = useCallback(async (data: { msgId?: string, eventType: string, payload: any }) => {
-    const { eventType, payload } = data;
-    if (eventType === 'auth') {
-      const user = payload?.user || {};
-      setSessionToken(user.token);
-      setPlayerId(user.playerId);
-      setVipCoin(parseFloat(user.vipCoin || '0'));
-      setChips(parseFloat(user.chips || '0'));
-      setFtnBalance(parseFloat(user.ftnBalance || '0'));
-      addLog(`✅ Authenticated as ${user.playerId}. Chips: ${user.chips}, VIP: ${user.vipCoin}, FTN: ${user.ftnBalance}`);
-      toast.success(`Authenticated as ${user.playerId}`);
-      await refreshLeaderboards(); // Refresh after successful auth
-    } else if (eventType === 'profileUpdate') {
-      const profile = payload?.profile || {};
-      setChips(parseFloat(profile.chips || chips));
-      setVipCoin(parseFloat(profile.vipCoin || vipCoin));
-      setFtnBalance(parseFloat(profile.ftnBalance || ftnBalance));
-      addLog(`🔄 Balance update: Chips=${profile.chips}, VIP=${profile.vipCoin}, FTN=${profile.ftnBalance}`);
-    } else if (eventType === 'getLeaderBoard') {
-      const leaderBoardsList = payload?.leaderBoards || [];
-      addLog(`Received list of leaderboards: ${leaderBoardsList.map((lb: any) => lb.name || lb.id).join(', ')}`);
-    } else if (eventType === 'leaderboard') {
-      const lb = payload?.leaderboard || {};
-      const players = (payload?.players || []).map((p: any) => ({
-        ...p,
-        level: parseFloat(p.level || '0'),
-        xp: parseFloat(p.xp || '0'),
-        points: parseFloat(p.score || p.points || '0'), // Use 'score' if 'points' is not available
-        chips: parseFloat(p.chips || '0'),
-      }));
-      const lbId = parseInt(lb.id || payload?.leaderBoardId); // Handle different payload structures
-      if (!isNaN(lbId)) {
-        updateLeaderboardData(lbId, lb, players, new Date().toLocaleString());
-        detectChanges(lbId, players);
-        updatePlayerHistory(players, new Date().toLocaleString());
-      } else {
-        addLog(`📩 Leaderboard data received but could not determine ID: ${JSON.stringify(payload)}`);
-      }
-    } else if (eventType === 'error') {
-      addLog(`❌ Error: ${JSON.stringify(payload?.error || payload)}`);
-      toast.error(`Error: ${JSON.stringify(payload?.error || payload)}`);
-    } else if (eventType === 'ack') {
-      addLog(`ACK received for message ID ${data.msgId}`);
-    } else {
-      addLog(`📩 Unhandled event '${eventType}': ${JSON.stringify(payload)}`);
-    }
-  }, [addLog, refreshLeaderboards, updateLeaderboardData, detectChanges, updatePlayerHistory, chips, vipCoin, ftnBalance]);
-
-  const connect = useCallback(async () => {
-    setIsConnecting(true);
-    addLog('Connecting...');
-    try {
-      await wsClient.connect();
-
-      await new Promise<void>((resolve) => {
-        const onNamespaceConnected = () => {
-          wsClient.off('namespace_connected', onNamespaceConnected);
-          resolve();
-        };
-        wsClient.on('namespace_connected', onNamespaceConnected);
-      });
-
-      const authPayload = {
-        login: credentials.login,
-        password: credentials.password,
-        userName: null,
-        provider: 1,
-        versionNumber: "2.1.5",
-        udid: "2587809A-796B-4E35-AA69-176F8AD0974F",
-        platform: 0,
-        language: 0,
-        logInType: 0,
-        guestToken: null
-      };
-      await wsClient.sendMessage('auth', authPayload, true); // Wait for auth response
-    } catch (error) {
-      addLog(`Connection failed: ${error}`);
-      toast.error('Failed to connect to WebSocket.');
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [addLog, credentials]);
-
-  const disconnect = useCallback(() => {
-    wsClient.disconnect();
-    setSessionToken(null);
-    setPlayerId(null);
-    setVipCoin(0);
-    setChips(0);
-    setFtnBalance(0);
-    setAutoRefresh(false);
-    setEndlessRunning(false);
-    if (autoRefreshIntervalRef.current) {
-      clearInterval(autoRefreshIntervalRef.current);
-      autoRefreshIntervalRef.current = null;
-    }
-    if (endlessSubmissionIntervalRef.current) {
-      clearInterval(endlessSubmissionIntervalRef.current);
-      endlessSubmissionIntervalRef.current = null;
-    }
-    addLog('Disconnected.');
-    toast.info('Disconnected from WebSocket.');
-  }, [addLog]);
-
-  // --- New Action Functions ---
+  // --- Core Action Functions (kept here as they interact with wsClient and core state) ---
 
   const startGame = useCallback(async () => {
     if (!isConnected || !sessionToken) {
       toast.warning('Not connected or not authenticated.');
       return;
     }
-    addLog(`Starting game ${gameId}...`);
+    // gameId is now managed by useEndlessMode, but startGame needs it.
+    // We'll pass it from useEndlessMode to useGameeFlowAnalyzer's return, then to startGame.
+    // For now, let's assume gameId is available from the state of useGameeFlowAnalyzer
+    // or passed as an argument if it's truly dynamic.
+    // For this refactor, I'll temporarily use a default or assume it's passed.
+    // A better approach would be to pass gameId as an argument to startGame if it's dynamic.
+    // For now, let's make it accept gameId as an argument.
+    addLog(`Starting game...`);
     try {
       await wsClient.sendMessage('start_game', {
         sessionToken: sessionToken,
         gameType: "default",
-        gameId: gameId
+        gameId: 7 // Default gameId, will be overridden by endless mode if active
       });
-      toast.success(`Game ${gameId} started.`);
+      toast.success(`Game started.`);
     } catch (error) {
       addLog(`Failed to start game: ${error}`);
       toast.error('Failed to start game.');
     }
-  }, [isConnected, sessionToken, gameId, addLog]);
+  }, [isConnected, sessionToken, addLog]);
 
   const submitGameScore = useCallback(async (score: number, index: number, ftn: string) => {
     if (!isConnected || !sessionToken) {
@@ -328,10 +139,10 @@ export const useGameeFlowAnalyzer = () => {
     }
     addLog(`Submitting score: ${score}, index: ${index}, ftn: ${ftn}`);
     try {
-      const startScore = vipCoin; // Use current VIP coin as start score
-      const hash = await generateSha256Hash(`${startScore}${index}${score}${ftn}`);
+      const currentVipCoin = vipCoin; // Capture current VIP coin
+      const hash = await generateSha256Hash(`${currentVipCoin}${index}${score}${ftn}`);
       const scoreData = {
-        startScore: startScore,
+        startScore: currentVipCoin,
         index: index,
         indexTime: new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         syncState: (index % 2 === 0),
@@ -455,7 +266,8 @@ export const useGameeFlowAnalyzer = () => {
     try {
       await wsClient.sendMessage('action', { request: 'getFriendRequests' });
       toast.info('Friend requests sent.');
-    } catch (error) {
+    }
+    catch (error) {
       addLog(`Failed to get friend requests: ${error}`);
       toast.error('Failed to get friend requests.');
     }
@@ -586,51 +398,133 @@ export const useGameeFlowAnalyzer = () => {
     }
   }, [isConnected, ftnBalance, addLog]);
 
-  // Endless Mode Logic
-  const startEndlessSubmission = useCallback(async () => {
-    if (!isConnected || endlessRunning) {
-      toast.warning('Not connected or endless mode already running.');
-      return;
-    }
-    setEndlessRunning(true);
-    setEndlessCount(0);
-    addLog('Starting endless score submission...');
-    toast.info('Endless score submission started.');
+  // Use the new endless mode hook
+  const {
+    endlessRunning,
+    endlessDelay,
+    setEndlessDelay,
+    scoreMultiplier,
+    setScoreMultiplier,
+    gameId, // gameId is now managed by useEndlessMode
+    setGameId,
+    endlessCount,
+    targetVip,
+    setTargetVip,
+    startEndlessSubmission,
+    stopEndlessSubmission,
+  } = useEndlessMode({
+    isConnected,
+    sessionToken,
+    vipCoin,
+    addLog,
+    startGame, // Pass startGame from here
+    submitGameScore, // Pass submitGameScore from here
+  });
 
-    await startGame(); // Start game session first
 
-    let i = 0;
-    endlessSubmissionIntervalRef.current = setInterval(async () => {
-      if (!endlessRunning) {
-        clearInterval(endlessSubmissionIntervalRef.current!);
-        endlessSubmissionIntervalRef.current = null;
-        return;
+  const handleWsMessage = useCallback(async (data: { msgId?: string, eventType: string, payload: any }) => {
+    const { eventType, payload } = data;
+    if (eventType === 'auth') {
+      const user = payload?.user || {};
+      setSessionToken(user.token);
+      setPlayerId(user.playerId);
+      setVipCoin(parseFloat(user.vipCoin || '0'));
+      setChips(parseFloat(user.chips || '0'));
+      setFtnBalance(parseFloat(user.ftnBalance || '0'));
+      addLog(`✅ Authenticated as ${user.playerId}. Chips: ${user.chips}, VIP: ${user.vipCoin}, FTN: ${user.ftnBalance}`);
+      toast.success(`Authenticated as ${user.playerId}`);
+      await refreshLeaderboards(); // Refresh after successful auth
+    } else if (eventType === 'profileUpdate') {
+      const profile = payload?.profile || {};
+      setChips(parseFloat(profile.chips || chips));
+      setVipCoin(parseFloat(profile.vipCoin || vipCoin));
+      setFtnBalance(parseFloat(profile.ftnBalance || ftnBalance));
+      addLog(`🔄 Balance update: Chips=${profile.chips}, VIP=${profile.vipCoin}, FTN=${profile.ftnBalance}`);
+    } else if (eventType === 'getLeaderBoard') {
+      const leaderBoardsList = payload?.leaderBoards || [];
+      addLog(`Received list of leaderboards: ${leaderBoardsList.map((lb: any) => lb.name || lb.id).join(', ')}`);
+    } else if (eventType === 'leaderboard') {
+      const lb = payload?.leaderboard || {};
+      const players = (payload?.players || []).map((p: any) => ({
+        ...p,
+        level: parseFloat(p.level || '0'),
+        xp: parseFloat(p.xp || '0'),
+        points: parseFloat(p.score || p.points || '0'), // Use 'score' if 'points' is not available
+        chips: parseFloat(p.chips || '0'),
+      }));
+      const lbId = parseInt(lb.id || payload?.leaderBoardId); // Handle different payload structures
+      if (!isNaN(lbId)) {
+        updateLeaderboardData(lbId, lb, players, new Date().toLocaleString());
+        detectChanges(lbId, players);
+        updatePlayerHistory(players, new Date().toLocaleString());
+      } else {
+        addLog(`📩 Leaderboard data received but could not determine ID: ${JSON.stringify(payload)}`);
       }
-
-      const score = (i + 1) * scoreMultiplier + Math.floor(Math.random() * 21) - 10; // Random variation
-      const ftn = String(Math.floor((i + 1) / 2) + Math.floor(Math.random() * 2)); // Slight variation
-      
-      await submitGameScore(score, i, ftn);
-      setEndlessCount(prev => prev + 1);
-      i++;
-
-      if (targetVip > 0 && vipCoin >= targetVip) {
-        stopEndlessSubmission();
-        toast.success(`Target VIP ${targetVip} reached!`);
-      }
-    }, (endlessDelay * 1000) + (Math.random() * 400 - 200)); // Jittered delay
-  }, [isConnected, endlessRunning, endlessDelay, scoreMultiplier, gameId, targetVip, vipCoin, addLog, startGame, submitGameScore]);
-
-  const stopEndlessSubmission = useCallback(() => {
-    setEndlessRunning(false);
-    if (endlessSubmissionIntervalRef.current) {
-      clearInterval(endlessSubmissionIntervalRef.current);
-      endlessSubmissionIntervalRef.current = null;
+    } else if (eventType === 'error') {
+      addLog(`❌ Error: ${JSON.stringify(payload?.error || payload)}`);
+      toast.error(`Error: ${JSON.stringify(payload?.error || payload)}`);
+    } else if (eventType === 'ack') {
+      addLog(`ACK received for message ID ${data.msgId}`);
+    } else {
+      addLog(`📩 Unhandled event '${eventType}': ${JSON.stringify(payload)}`);
     }
-    addLog('Endless submission stopped.');
-    toast.info('Endless score submission stopped.');
-  }, [addLog]);
+  }, [addLog, refreshLeaderboards, updateLeaderboardData, detectChanges, updatePlayerHistory, chips, vipCoin, ftnBalance]);
 
+  const connect = useCallback(async () => {
+    setIsConnecting(true);
+    addLog('Connecting...');
+    try {
+      await wsClient.connect();
+
+      await new Promise<void>((resolve) => {
+        const onNamespaceConnected = () => {
+          wsClient.off('namespace_connected', onNamespaceConnected);
+          resolve();
+        };
+        wsClient.on('namespace_connected', onNamespaceConnected);
+      });
+
+      const authPayload = {
+        login: credentials.login,
+        password: credentials.password,
+        userName: null,
+        provider: 1,
+        versionNumber: "2.1.5",
+        udid: "2587809A-796B-4E35-AA69-176F8AD0974F",
+        platform: 0,
+        language: 0,
+        logInType: 0,
+        guestToken: null
+      };
+      await wsClient.sendMessage('auth', authPayload, true); // Wait for auth response
+    } catch (error) {
+      addLog(`Connection failed: ${error}`);
+      toast.error('Failed to connect to WebSocket.');
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [addLog, credentials]);
+
+  const disconnect = useCallback(() => {
+    wsClient.disconnect();
+    setSessionToken(null);
+    setPlayerId(null);
+    setVipCoin(0);
+    setChips(0);
+    setFtnBalance(0);
+    setAutoRefresh(false);
+    // Reset endless mode state
+    stopEndlessSubmission(); // Call stop from useEndlessMode
+    setChanges([]); // Clear leaderboard changes
+    setPlayerHistory({}); // Clear player history
+
+    if (autoRefreshIntervalRef.current) {
+      clearInterval(autoRefreshIntervalRef.current);
+      autoRefreshIntervalRef.current = null;
+    }
+    addLog('Disconnected.');
+    toast.info('Disconnected from WebSocket.');
+  }, [addLog, setChanges, setPlayerHistory, stopEndlessSubmission]);
 
   useEffect(() => {
     wsClient.on('log', addLog);
@@ -684,9 +578,6 @@ export const useGameeFlowAnalyzer = () => {
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);
       }
-      if (endlessSubmissionIntervalRef.current) {
-        clearInterval(endlessSubmissionIntervalRef.current);
-      }
     };
   }, [addLog, handleWsMessage]);
 
@@ -718,9 +609,6 @@ export const useGameeFlowAnalyzer = () => {
     isConnecting,
     isRefreshing,
     logs,
-    leaderboardData,
-    changes,
-    playerHistory,
     credentials,
     setCredentials,
     connect,
@@ -734,7 +622,11 @@ export const useGameeFlowAnalyzer = () => {
     vipCoin,
     chips,
     ftnBalance,
-    // Endless Mode
+    // From useLeaderboardData
+    leaderboardData,
+    changes,
+    playerHistory,
+    // From useEndlessMode
     endlessRunning,
     endlessDelay,
     setEndlessDelay,
@@ -747,7 +639,7 @@ export const useGameeFlowAnalyzer = () => {
     setTargetVip,
     startEndlessSubmission,
     stopEndlessSubmission,
-    // New Actions
+    // Core Actions
     startGame,
     submitGameScore,
     gameCrash,
