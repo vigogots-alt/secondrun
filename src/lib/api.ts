@@ -1,9 +1,37 @@
-import { EventEmitter } from 'events';
+// Custom EventEmitter for browser compatibility
+class CustomEventEmitter {
+  private listeners: { [event: string]: Function[] } = {};
+
+  on(event: string, listener: Function) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(listener);
+  }
+
+  off(event: string, listener: Function) {
+    if (!this.listeners[event]) {
+      return;
+    }
+    this.listeners[event] = this.listeners[event].filter(
+      (l) => l !== listener
+    );
+  }
+
+  emit(event: string, ...args: any[]) {
+    if (!this.listeners[event]) {
+      return;
+    }
+    this.listeners[event].forEach((listener) => {
+      listener(...args);
+    });
+  }
+}
 
 const WS_URL = 'wss://social.bcsocial.net/socket.io/?transport=websocket&EIO=3';
 const NAMESPACE = '/first-run2'; // Corresponds to '40/first-run2' and '42/first-run2'
 
-export class WebSocketClient extends EventEmitter {
+export class WebSocketClient extends CustomEventEmitter {
   private ws: WebSocket | null = null;
   private messageId: number = 1;
   private isConnected: boolean = false;
@@ -107,7 +135,7 @@ export class WebSocketClient extends EventEmitter {
       // For simplicity, we'll resolve immediately for now.
       // A more robust solution would involve mapping msgId to a promise resolver.
       // For this app, the `handleMessage` will emit events that the hook listens to.
-      resolve(null); 
+      resolve(null);
     });
   }
 
@@ -116,7 +144,7 @@ export class WebSocketClient extends EventEmitter {
       this.emit('log', 'Received pong.');
       return;
     }
-    
+
     // Handle initial connection response (e.g., '0{"sid":"...", ...}')
     if (message.startsWith('0{')) {
         try {
