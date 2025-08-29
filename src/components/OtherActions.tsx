@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { wsClient } from '@/lib/api'; // Import wsClient for custom action
+import { toast } from 'sonner';
 
 interface OtherActionsProps {
   isConnected: boolean;
@@ -40,18 +41,31 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
   const [customRequestName, setCustomRequestName] = useState('');
   const [customRequestData, setCustomRequestData] = useState('');
 
+  // State for custom game score submission
+  const [customScore, setCustomScore] = useState(22); // Default to 22 as per request
+  const [customIndex, setCustomIndex] = useState(3);
+  const [customFtn, setCustomFtn] = useState('0');
+
   const handleCustomAction = async () => {
     if (!isConnected) {
-      alert('Not connected. Please connect first.');
+      toast.warning('Not connected. Please connect first.');
       return;
     }
     try {
       const data = customRequestData ? JSON.parse(customRequestData) : null;
       await wsClient.sendMessage('action', { request: customRequestName, data: data });
-      alert('Custom action sent!');
+      toast.success('Custom action sent!');
     } catch (e) {
-      alert('Error sending custom action or invalid JSON: ' + e);
+      toast.error('Error sending custom action or invalid JSON: ' + e);
     }
+  };
+
+  const handleCustomScoreSubmission = async () => {
+    if (!isConnected) {
+      toast.warning('Not connected. Please connect first.');
+      return;
+    }
+    await submitGameScore(customScore, customIndex, customFtn);
   };
 
   return (
@@ -61,6 +75,45 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
       </CardHeader>
       <CardContent className="space-y-2">
         <Button onClick={() => submitGameScore(100, 0, "0")} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
+        
+        {/* New section for custom game score submission */}
+        <div className="pt-4 border-t border-border mt-4">
+          <h3 className="text-lg font-semibold mb-2">Custom Game Score</h3>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <Label htmlFor="custom-score">Score</Label>
+            <Input
+              id="custom-score"
+              type="number"
+              value={customScore}
+              onChange={(e) => setCustomScore(parseInt(e.target.value))}
+              disabled={!isConnected}
+              className="bg-input text-foreground border-border"
+            />
+            <Label htmlFor="custom-index">Index</Label>
+            <Input
+              id="custom-index"
+              type="number"
+              value={customIndex}
+              onChange={(e) => setCustomIndex(parseInt(e.target.value))}
+              disabled={!isConnected}
+              className="bg-input text-foreground border-border"
+            />
+            <Label htmlFor="custom-ftn">FTN</Label>
+            <Input
+              id="custom-ftn"
+              type="text"
+              value={customFtn}
+              onChange={(e) => setCustomFtn(e.target.value)}
+              disabled={!isConnected}
+              className="bg-input text-foreground border-border"
+            />
+          </div>
+          <Button onClick={handleCustomScoreSubmission} disabled={!isConnected} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            Submit Custom Score
+          </Button>
+        </div>
+        {/* End new section */}
+
         <Button onClick={startGame} disabled={!isConnected} className="w-full">Start Game</Button>
         <Button onClick={gameCrash} disabled={!isConnected} className="w-full">Game Crash</Button>
         <Button onClick={endGame} disabled={!isConnected} className="w-full">End Game</Button>
