@@ -191,17 +191,19 @@ export class WebSocketClient extends CustomEventEmitter {
         let payload: any = {};
 
         if (Array.isArray(parsedArray) && parsedArray.length > 0) {
-          // Check for the specific problematic format: ["{\"key\":\"value\"}"]
-          // This happens for 'auth' responses where the entire user object is stringified as the first element.
-          if (parsedArray.length === 1 && typeof parsedArray[0] === 'string' && parsedArray[0].startsWith('{') && parsedArray[0].endsWith('}')) {
+          let potentialPayload = null;
+          if (typeof parsedArray[0] === 'string') {
             try {
-              payload = JSON.parse(parsedArray[0]);
-              eventType = 'response_payload_only'; // A special internal event type
+              potentialPayload = JSON.parse(parsedArray[0]);
             } catch (e) {
-              // If it's not valid JSON, treat it as a regular string event name
-              eventType = parsedArray[0];
-              payload = {};
+              // Not a valid JSON string, keep potentialPayload as null
             }
+          }
+
+          if (parsedArray.length === 1 && potentialPayload !== null) {
+            // Case: ["{\"key\":\"value\"}"] -> treat as payload-only response
+            payload = potentialPayload;
+            eventType = 'response_payload_only';
           } else if (typeof parsedArray[0] === 'string') {
             // Standard Socket.IO event: ["eventName", payload]
             eventType = parsedArray[0];
