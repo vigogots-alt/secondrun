@@ -155,7 +155,15 @@ export class WebSocketClient extends CustomEventEmitter {
         return;
     }
 
-    if (message === '40' + NAMESPACE) {
+    // Handle Socket.IO namespace connection messages
+    if (message === '40') {
+        this.emit('log', 'Received Socket.IO namespace handshake (40).');
+        // This is the initial handshake for the namespace, not the full connection confirmation
+        return;
+    }
+
+    if (message === '40' + NAMESPACE + ',') { // Note the comma at the end
+        this.emit('log', `Namespace ${NAMESPACE} connected.`);
         this.emit('namespace_connected');
         return;
     }

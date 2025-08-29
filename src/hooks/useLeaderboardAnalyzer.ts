@@ -61,88 +61,6 @@ export const useLeaderboardAnalyzer = () => {
     setLogs((prev) => [...prev, `${timestamp} ${message}`]);
   }, []);
 
-  const handleWsMessage = useCallback(async ({ eventType, payload }: { msgId: string, eventType: string, payload: any }) => {
-    if (eventType === 'auth') {
-      const user = payload?.user || {};
-      setSessionToken(user.token);
-      setPlayerId(user.playerId);
-      addLog(`✅ Authenticated as ${user.playerId}`);
-      toast.success(`Authenticated as ${user.playerId}`);
-      await refreshLeaderboards(); // Refresh after successful auth
-    } else if (eventType === 'getLeaderBoard') {
-      addLog(`Received getLeaderBoard response: ${JSON.stringify(payload)}`);
-    } else if (eventType === 'leaderboard') {
-      const lb = payload?.leaderBoard || {};
-      const players = payload?.players || [];
-      const lbId = parseInt(lb.id);
-      const timestamp = new Date().toLocaleString();
-
-      updateLeaderboardData(lbId, lb, players, timestamp);
-      detectChanges(lbId, players);
-      updatePlayerHistory(players, timestamp);
-    } else if (eventType === 'error') {
-      addLog(`❌ Error: ${JSON.stringify(payload?.error)}`);
-      toast.error(`Error: ${JSON.stringify(payload?.error)}`);
-    } else {
-      addLog(`📩 Unhandled event '${eventType}': ${JSON.stringify(payload)}`);
-    }
-  }, [addLog]);
-
-  const connect = useCallback(async () => {
-    addLog('Connecting...');
-    try {
-      await wsClient.connect();
-      // After successful connection, send auth request
-      const authPayload = {
-        login: credentials.login,
-        password: credentials.password,
-        userName: null,
-        provider: 1,
-        versionNumber: "2.1.5",
-        udid: "2587809A-796B-4E35-AA69-176F8AD0974F",
-        platform: 0,
-        language: 0,
-        logInType: 0,
-        guestToken: null
-      };
-      await wsClient.sendMessage('auth', authPayload);
-    } catch (error) {
-      addLog(`Connection failed: ${error}`);
-      toast.error('Failed to connect to WebSocket.');
-    }
-  }, [addLog, credentials]);
-
-  const disconnect = useCallback(() => {
-    wsClient.disconnect();
-    setSessionToken(null);
-    setPlayerId(null);
-    setAutoRefresh(false);
-    if (autoRefreshIntervalRef.current) {
-      clearInterval(autoRefreshIntervalRef.current);
-      autoRefreshIntervalRef.current = null;
-    }
-    addLog('Disconnected.');
-    toast.info('Disconnected from WebSocket.');
-  }, [addLog]);
-
-  const refreshLeaderboards = useCallback(async () => {
-    if (!isConnected) {
-      addLog('Not connected. Cannot refresh leaderboards.');
-      toast.warning('Not connected. Please connect first.');
-      return;
-    }
-    addLog('Refreshing leaderboards...');
-    // Request all available leaderboards (though we only process specific IDs)
-    await wsClient.sendMessage('action', { request: 'getLeaderBoard', data: null });
-    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
-
-    for (const lbId of leaderboardIds) {
-      await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
-      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between requests
-    }
-    toast.success('Leaderboards refreshed.');
-  }, [isConnected, addLog]);
-
   const updateLeaderboardData = useCallback((lbId: number, lb: Leaderboard, players: Player[], timestamp: string) => {
     setLeaderboardData((prev) => ({
       ...prev,
@@ -187,8 +105,8 @@ export const useLeaderboardAnalyzer = () => {
         setChanges((prevChanges) => [
           ...prevChanges,
           `--- Changes in LB ${lbId} (${new Date().toLocaleTimeString()}) ---`,
-          ...currentChanges,
           '', // Add a blank line for separation
+          ...currentChanges,
         ]);
       }
       return { ...prev, [lbId]: newPlayers };
@@ -219,6 +137,98 @@ export const useLeaderboardAnalyzer = () => {
       return newHistory;
     });
   }, []);
+
+  const refreshLeaderboards = useCallback(async () => {
+    if (!isConnected) {
+      addLog('Not connected. Cannot refresh leaderboards.');
+      toast.warning('Not connected. Please connect first.');
+      return;
+    }
+    addLog('Refreshing leaderboards...');
+    // Request all available leaderboards (though we only process specific IDs)
+    await wsClient.sendMessage('action', { request: 'getLeaderBoard', data: null });
+    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
+
+    for (const lbId of leaderboardIds) {
+      await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between requests
+    }
+    toast.success('Leaderboards refreshed.');
+  }, [isConnected, addLog, leaderboardIds]);
+
+  const handleWsMessage = useCallback(async ({ eventType, payload }: { msgId: string, eventType: string, payload: any }) => {
+    if (eventType === 'auth') {
+      const user = payload?.user || {};
+      setSessionToken(user.token);
+      setPlayerId(user.playerId);
+      addLog(`✅ Authenticated as ${user.playerId}`);
+      toast.success(`Authenticated as ${user.playerId}`);
+      await refreshLeaderboards(); // Refresh after successful auth
+    } else if (eventType === 'getLeaderBoard') {
+      addLog(`Received getLeaderBoard response: ${JSON.stringify(payload)}`);
+    } else if (eventType === 'leaderboard') {
+      const lb = payload?.leaderBoard || {};
+      const players = payload?.players || [];
+      const lbId = parseInt(lb.id);
+      const timestamp = new Date().toLocaleString();
+
+      updateLeaderboardData(lbId, lb, players, timestamp);
+      detectChanges(lbId, players);
+      updatePlayerHistory(players, timestamp);
+    } else if (eventType === 'error') {
+      addLog(`❌ Error: ${JSON.stringify(payload?.error)}`);
+      toast.error(`Error: ${JSON.stringify(payload?.error)}`);
+    } else {
+      addLog(`📩 Unhandled event '${eventType}': ${JSON.stringify(payload)}`);
+    }
+  }, [addLog, refreshLeaderboards, updateLeaderboardData, detectChanges, updatePlayerHistory]); // Added refreshLeaderboards to dependencies
+
+  const connect = useCallback(async () => {
+    addLog('Connecting...');
+    try {
+      await wsClient.connect();
+
+      // Wait for the namespace to be connected before sending auth
+      await new Promise<void>((resolve) => {
+        const onNamespaceConnected = () => {
+          wsClient.off('namespace_connected', onNamespaceConnected);
+          resolve();
+        };
+        wsClient.on('namespace_connected', onNamespaceConnected);
+      });
+
+      // After successful connection and namespace connection, send auth request
+      const authPayload = {
+        login: credentials.login,
+        password: credentials.password,
+        userName: null,
+        provider: 1,
+        versionNumber: "2.1.5",
+        udid: "2587809A-796B-4E35-AA69-176F8AD0974F",
+        platform: 0,
+        language: 0,
+        logInType: 0,
+        guestToken: null
+      };
+      await wsClient.sendMessage('auth', authPayload);
+    } catch (error) {
+      addLog(`Connection failed: ${error}`);
+      toast.error('Failed to connect to WebSocket.');
+    }
+  }, [addLog, credentials]);
+
+  const disconnect = useCallback(() => {
+    wsClient.disconnect();
+    setSessionToken(null);
+    setPlayerId(null);
+    setAutoRefresh(false);
+    if (autoRefreshIntervalRef.current) {
+      clearInterval(autoRefreshIntervalRef.current);
+      autoRefreshIntervalRef.current = null;
+    }
+    addLog('Disconnected.');
+    toast.info('Disconnected from WebSocket.');
+  }, [addLog]);
 
   useEffect(() => {
     wsClient.on('log', addLog);
