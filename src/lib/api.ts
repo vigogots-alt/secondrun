@@ -198,11 +198,12 @@ export class WebSocketClient extends CustomEventEmitter {
       }
     }
 
-    if (message === '40') { // Engine.IO upgrade/ack
-      return { eventType: 'engineio_ack', payload: null };
+    if (message === '40') { // Engine.IO upgrade/ack from server
+      return { eventType: 'engineio_ack_from_server', payload: null };
     }
 
-    if (message === '40' + NAMESPACE) { // Socket.IO namespace connected
+    if (message === '40' + NAMESPACE + ',') { // Socket.IO namespace connected from server
+      // The server sends '40/first-run2,' to confirm namespace connection
       return { eventType: 'namespace_connected', payload: null };
     }
 
@@ -264,25 +265,22 @@ export class WebSocketClient extends CustomEventEmitter {
 
     const { msgId, eventType, payload } = parsed;
 
-    // Handle Engine.IO handshake sequence
-    if (eventType === 'initial_connect' && !this.engineIoConnected) {
+    if (eventType === 'initial_connect') {
       this.emit('initial_connect', payload);
       this.sendRaw('40'); // Acknowledge Engine.IO handshake
-      // Do NOT send '40/first-run2' here. It's handled by the 'engineio_ack'
       return;
     }
 
-    if (eventType === 'engineio_ack' && !this.engineIoConnected) {
+    if (eventType === 'engineio_ack_from_server') { // Server's 40 response
       this.sendRaw('40' + NAMESPACE); // Connect to Socket.IO namespace
-      // The 'namespace_connected' event will be emitted when the server responds to this.
       return;
     }
 
     if (eventType === 'namespace_connected' && !this.engineIoConnected) {
       this.engineIoConnected = true;
       this.startPingPong();
-      this.emit('namespace_connected'); // Emit to external listeners
-      this.namespaceConnectResolver?.resolve(); // Resolve the main connect promise
+      this.emit('namespace_connected');
+      this.namespaceConnectResolver?.resolve();
       this.namespaceConnectResolver = null;
       return;
     }
