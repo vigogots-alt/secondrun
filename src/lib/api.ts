@@ -119,7 +119,8 @@ export class WebSocketClient extends CustomEventEmitter {
         reject(new Error('WebSocket explicitly disconnected.'));
       });
       this.responseResolvers.clear();
-      this.namespaceConnectResolver?.reject(new Error('WebSocket explicitly disconnected.')); // Reject the main connect promise
+      // Also reject the namespaceConnectResolver if it's still pending
+      this.namespaceConnectResolver?.reject(new Error('WebSocket explicitly disconnected.'));
       this.namespaceConnectResolver = null;
     }
   }
