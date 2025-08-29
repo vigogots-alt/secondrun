@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
+import { generateSha256Hash } from '@/utils/crypto'; // Import from new utility
 
 interface UseGameActionsProps {
   isConnected: boolean;
@@ -10,16 +11,6 @@ interface UseGameActionsProps {
   ftnBalance: number;
   addLog: (message: string) => void;
   gameId: number; // Assuming gameId is needed for startGame
-}
-
-// Utility to generate SHA256 hash
-async function generateSha256Hash(data: string): Promise<string> {
-  const textEncoder = new TextEncoder();
-  const dataBuffer = textEncoder.encode(data);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hexHash;
 }
 
 export const useGameActions = ({
