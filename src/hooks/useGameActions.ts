@@ -49,27 +49,52 @@ export const useGameActions = ({
     }
     addLog(`Submitting score: ${score}, index: ${index}, ftn: ${ftn}`);
     try {
-      const startScore = vipCoin; // Use current VIP coin as start score
-      const hash = await generateSha256Hash(`${startScore}${index}${score}${ftn}`);
-      const scoreData = {
-        startScore: startScore,
+      let currentStartScore = vipCoin;
+      let currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${ftn}`);
+      let scoreData = {
+        startScore: currentStartScore,
         index: index,
         indexTime: new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         syncState: (index % 2 === 0),
-        hash: hash,
+        hash: currentHash,
         ftn: ftn,
         score: score
       };
-      const response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+
+      let response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+
       if (response?.eventType === 'error' && response.payload?.code === 33) {
         addLog('Received error code 33, retrying with updated startScore...');
-        const newStartScore = vipCoin; // Get updated VIP coin
-        const newHash = await generateSha256Hash(`${newStartScore}${index}${score}${ftn}`);
-        scoreData.startScore = newStartScore;
-        scoreData.hash = newHash;
-        await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+        // Get updated VIP coin for the retry
+        currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
+        currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${ftn}`);
+        scoreData = { // Recreate scoreData with updated values
+          ...scoreData,
+          startScore: currentStartScore,
+          hash: currentHash,
+        };
+        
+        // Attempt retry
+        response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+        
+        // Check response from retry
+        if (response?.eventType === 'error') {
+          addLog(`Retry failed: ${JSON.stringify(response.payload)}`);
+          toast.error(`Failed to submit score after retry: ${JSON.stringify(response.payload?.error || response.payload)}`);
+          return; // Exit if retry also failed
+        }
       }
-      toast.success(`Score ${score} submitted.`);
+
+      // If we reach here, either initial submission was successful, or retry was successful
+      if (response?.eventType !== 'error') {
+        toast.success(`Score ${score} submitted.`);
+      } else {
+        // This case should ideally be caught by the 'if (response?.eventType === 'error')' block above
+        // but as a fallback, if an error somehow slips through without code 33
+        addLog(`Failed to submit score: ${JSON.stringify(response.payload)}`);
+        toast.error(`Failed to submit score: ${JSON.stringify(response.payload?.error || response.payload)}`);
+      }
+
     } catch (error) {
       addLog(`Failed to submit score: ${error}`);
       toast.error('Failed to submit score.');
