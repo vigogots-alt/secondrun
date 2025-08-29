@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlayerHistoryChart } from './PlayerHistoryChart'; // Import the new chart component
 
 interface Player {
   id: string;
@@ -140,8 +141,8 @@ export const AnalyzerTabs: React.FC<AnalyzerTabsProps> = ({
             <CardHeader>
               <CardTitle className="text-xl font-semibold">Player History</CardTitle>
             </CardHeader>
-            <CardContent className="h-[calc(100%-80px)] flex">
-              <ScrollArea className="w-1/3 border-r pr-4 bg-background rounded-l-md">
+            <CardContent className="h-[calc(100%-80px)] flex flex-col lg:flex-row"> {/* Adjusted for chart */}
+              <ScrollArea className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r pr-4 pb-4 lg:pb-0 bg-background rounded-t-md lg:rounded-l-md lg:rounded-tr-none">
                 <ul className="space-y-1">
                   {Object.entries(playerHistory).length > 0 ? (
                     Object.entries(playerHistory).map(([id, history]) => (
@@ -158,20 +159,25 @@ export const AnalyzerTabs: React.FC<AnalyzerTabsProps> = ({
                   )}
                 </ul>
               </ScrollArea>
-              <ScrollArea className="w-2/3 pl-4 bg-background rounded-r-md">
+              <div className="w-full lg:w-2/3 pl-0 lg:pl-4 pt-4 lg:pt-0 bg-background rounded-b-md lg:rounded-r-md lg:rounded-bl-none flex flex-col">
                 {selectedPlayerId && playerHistory[selectedPlayerId] ? (
-                  <div>
+                  <>
                     <h3 className="text-lg font-semibold mb-2">History for Player: {playerHistory[selectedPlayerId][0]?.nickName || selectedPlayerId}</h3>
-                    {playerHistory[selectedPlayerId].map((entry, index) => (
-                      <p key={index} className="mb-1 text-sm font-mono">
-                        {entry.time}: Pts={entry.points}, Chips={entry.chips}, Lvl={entry.level}, XP={entry.xp}
-                      </p>
-                    ))}
-                  </div>
+                    <div className="flex-grow">
+                      <PlayerHistoryChart history={playerHistory[selectedPlayerId]} />
+                    </div>
+                    <ScrollArea className="h-40 mt-4 border-t pt-4"> {/* Added scroll for detailed text history */}
+                      {playerHistory[selectedPlayerId].map((entry, index) => (
+                        <p key={index} className="mb-1 text-sm font-mono">
+                          {entry.time}: Pts={entry.points}, Chips={entry.chips}, Lvl={entry.level}, XP={entry.xp}
+                        </p>
+                      ))}
+                    </ScrollArea>
+                  </>
                 ) : (
-                  <p className="text-muted-foreground">Select a player to view their history.</p>
+                  <p className="text-muted-foreground p-2">Select a player to view their history and chart.</p>
                 )}
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
