@@ -20,7 +20,8 @@ export const useEndlessMode = ({
   endGame,
 }: UseEndlessModeProps) => {
   const [isRunning, setIsRunning] = useState(false);
-  const [submissions, setSubmissions] = useState(0); // This will now also serve as the index
+  const [submissions, setSubmissions] = useState(0);
+  const submissionsRef = useRef(submissions); // Create a ref for submissions
   const [endlessDelay, setEndlessDelay] = useState(1.0);
   const [scoreMultiplier, setScoreMultiplier] = useState(22);
   const [gameId, setGameId] = useState(7);
@@ -30,6 +31,11 @@ export const useEndlessMode = ({
   useEffect(() => {
     latestVipCoin.current = vipCoin;
   }, [vipCoin]);
+
+  // Update the submissions ref whenever submissions state changes
+  useEffect(() => {
+    submissionsRef.current = submissions;
+  }, [submissions]);
 
   // Use a ref for the interval ID to manage it across renders
   const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -45,8 +51,8 @@ export const useEndlessMode = ({
     let currentScore: number;
     let currentSyncState: boolean;
 
-    // Use the current 'submissions' state as the index
-    const currentIndex = submissions;
+    // Use the current 'submissions' value from the ref
+    const currentIndex = submissionsRef.current; // <-- Access submissions via ref
 
     // Logic for specific scores and syncState based on index
     if (currentIndex === 0 || currentIndex === 1) {
@@ -64,7 +70,7 @@ export const useEndlessMode = ({
     }
 
     const ftn = "0";
-    const indexTime = getFormattedUTCTime(); // Use the new utility function
+    const indexTime = getFormattedUTCTime();
     
     await submitGameScore(currentScore, currentIndex, ftn, currentSyncState, indexTime);
     
@@ -83,7 +89,7 @@ export const useEndlessMode = ({
       setIsRunning(false);
       toast.success(`Target VIP ${targetVip} reached!`);
     }
-  }, [isConnected, isRunning, submissions, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin, gameId]);
+  }, [isConnected, isRunning, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin, gameId]); // Removed 'submissions' from dependencies
 
   useEffect(() => {
     if (isRunning && isConnected) {
@@ -103,7 +109,7 @@ export const useEndlessMode = ({
     return () => {
       if (intervalIdRef.current) clearInterval(intervalIdRef.current);
     };
-  }, [isRunning, isConnected, endlessDelay, runSubmission]); // runSubmission is now a dependency because it's a useCallback
+  }, [isRunning, isConnected, endlessDelay, runSubmission]);
 
   const startEndless = useCallback(async () => {
     if (!isConnected || isRunning) {
