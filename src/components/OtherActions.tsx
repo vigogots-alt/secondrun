@@ -45,9 +45,9 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
 
   // State for custom game score submission
   const [customScore, setCustomScore] = useState(22);
-  const [customIndex, setCustomIndex] = useState(3);
+  const [customIndex, setCustomIndex] = useState(3); // Default to 3
   const [customFtn, setCustomFtn] = useState('0'); // Keep as string for input
-  const [customSyncState, setCustomSyncState] = useState(false); // New state for syncState
+  const [customSyncState, setCustomSyncState] = useState(true); // Default to true for index 3
 
   const handleCustomAction = async () => {
     if (!isConnected) {
