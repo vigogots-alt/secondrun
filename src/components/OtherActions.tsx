@@ -69,7 +69,8 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
       return;
     }
     const now = new Date();
-    const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    // Use UTC methods for GMT 0
+    const indexTime = `${String(now.getUTCDate()).padStart(2, '0')}.${String(now.getUTCMonth() + 1).padStart(2, '0')}.${now.getUTCFullYear()} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}`;
     await submitGameScore(customScore, customIndex, customFtn, customSyncState, indexTime);
   };
 
@@ -85,7 +86,11 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
         </Button>
         
         {/* Updated sample score button to use syncState: true */}
-        <Button onClick={() => submitGameScore(100, 0, "0", true, new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }))} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
+        <Button onClick={() => {
+          const now = new Date();
+          const sampleIndexTime = `${String(now.getUTCDate()).padStart(2, '0')}.${String(now.getUTCMonth() + 1).padStart(2, '0')}.${now.getUTCFullYear()} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}`;
+          submitGameScore(100, 0, "0", true, sampleIndexTime);
+        }} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
         
         {/* Section for custom game score submission */}
         <div className="pt-4 border-t border-border mt-4">

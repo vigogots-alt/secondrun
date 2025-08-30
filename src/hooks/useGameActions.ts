@@ -222,7 +222,8 @@ export const useGameActions = ({
         const syncState = syncStates[i];
         const ftn = "0";
         const now = new Date();
-        const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        // Use UTC methods for GMT 0
+        const indexTime = `${String(now.getUTCDate()).padStart(2, '0')}.${String(now.getUTCMonth() + 1).padStart(2, '0')}.${now.getUTCFullYear()} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}`;
 
         addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}`);
         const response = await submitGameScore(score, i, ftn, syncState, indexTime);
