@@ -31,6 +31,9 @@ class CustomEventEmitter {
 const WS_URL = 'wss://social.bcsocial.net/socket.io/?transport=websocket&EIO=3';
 const NAMESPACE = '/first-run2'; // Corresponds to '40/first-run2' and '42/first-run2'
 
+// Define the regex once outside the class for efficiency
+const socketIOMessageRegex = new RegExp(`^4([23])${NAMESPACE},(\\d*)(.*)$`);
+
 export class WebSocketClient extends CustomEventEmitter {
   private ws: WebSocket | null = null;
   private messageId: number = 1;
@@ -184,6 +187,18 @@ export class WebSocketClient extends CustomEventEmitter {
   }
 
   private parseSocketMessage(message: string): { msgId?: string; eventType: string; payload: any } | null {
+    // Helper to parse potential nested JSON strings
+    const parseNestedJson = (data: any) => {
+      if (typeof data === 'string') {
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          return data; // Return original string if parsing fails
+        }
+      }
+      return data;
+    };
+
     // Engine.IO messages
     if (message === '3') { // Pong response
       return { eventType: 'pong', payload: null };
@@ -206,8 +221,6 @@ export class WebSocketClient extends CustomEventEmitter {
     }
 
     // Socket.IO messages (type 42 or 43)
-    // Use NAMESPACE constant in regex
-    const socketIOMessageRegex = new RegExp(`^4([23])${NAMESPACE},(\\d*)(.*)$`);
     const match = message.match(socketIOMessageRegex);
 
     if (match) {
@@ -222,22 +235,10 @@ export class WebSocketClient extends CustomEventEmitter {
 
         if (type === '2') { // Server-sent event: 42/namespace,["event_name", payload]
           eventType = typeof parsedArray[0] === 'string' ? parsedArray[0] : 'unknown_server_event';
-          payload = parsedArray.length > 1 ? parsedArray[1] : {};
-          // Handle potential nested JSON string in payload
-          if (typeof payload === 'string') {
-            try {
-              payload = JSON.parse(payload);
-            } catch (e) { /* ignore */ }
-          }
+          payload = parsedArray.length > 1 ? parseNestedJson(parsedArray[1]) : {};
         } else { // type === '3', Acknowledgement: 43/namespace,msgId[payload]
           eventType = 'ack_response'; // Generic type, actual event name from resolver
-          payload = parsedArray.length > 0 ? parsedArray[0] : {};
-          // Handle potential nested JSON string in payload
-          if (typeof payload === 'string') {
-            try {
-              payload = JSON.parse(payload);
-            } catch (e) { /* ignore */ }
-          }
+          payload = parsedArray.length > 0 ? parseNestedJson(parsedArray[0]) : {};
         }
 
         return { msgId, eventType, payload };

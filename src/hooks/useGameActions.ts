@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { generateSha256Hash } from '@/utils/crypto';
+import { getFormattedUTCTime } from '@/utils/time'; // Import the new utility
 
 interface UseGameActionsProps {
   isConnected: boolean;
@@ -221,9 +222,7 @@ export const useGameActions = ({
         const score = scores[i];
         const syncState = syncStates[i];
         const ftn = "0";
-        const now = new Date();
-        // Use UTC methods for GMT 0
-        const indexTime = `${String(now.getUTCDate()).padStart(2, '0')}.${String(now.getUTCMonth() + 1).padStart(2, '0')}.${now.getUTCFullYear()} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}`;
+        const indexTime = getFormattedUTCTime(); // Use the new utility function
 
         addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}`);
         const response = await submitGameScore(score, i, ftn, syncState, indexTime);
