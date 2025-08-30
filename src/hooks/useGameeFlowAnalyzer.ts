@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLeaderboardData } from './useLeaderboardData';
-import { useEndlessMode } from './useEndlessMode';
+import { useEndlessMode } from './useEndlessMode'; // Updated import
 import { useGameActions } from './useGameActions';
 import { useWebSocketConnection } from './useWebSocketConnection';
 import { useAuthAndBalance } from './useAuthAndBalance';
@@ -27,7 +27,7 @@ export const useGameeFlowAnalyzer = () => {
     ftnBalance,
     authenticate,
     resetAuthAndBalance,
-  } = useAuthAndBalance({ addLog }); // Removed isConnected from props
+  } = useAuthAndBalance({ addLog });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -46,8 +46,10 @@ export const useGameeFlowAnalyzer = () => {
     setPlayerHistory,
   } = useLeaderboardData(addLog);
 
+  // Game Actions are now managed here and passed to components,
+  // but useEndlessMode will get its own instance.
   const {
-    startGame: gameActionsStartGame,
+    startGame,
     submitGameScore,
     gameCrash,
     endGame,
@@ -70,33 +72,27 @@ export const useGameeFlowAnalyzer = () => {
     chips,
     ftnBalance,
     addLog,
-    gameId: 7,
+    gameId: 7, // Default gameId for general actions
   });
 
+  // useEndlessMode is now self-contained and gets its own dependencies
   const {
-    endlessRunning,
+    isRunning: endlessRunning, // Renamed to match previous prop name for components
+    submissions: endlessCount, // Renamed to match previous prop name for components
     endlessDelay,
     setEndlessDelay,
     scoreMultiplier,
     setScoreMultiplier,
-    gameId,
+    gameId, // This gameId is managed by useEndlessMode itself
     setGameId,
-    endlessCount,
     targetVip,
     setTargetVip,
-    startEndlessSubmission,
-    stopEndlessSubmission,
-  } = useEndlessMode({
-    isConnected,
-    sessionToken,
-    vipCoin,
-    addLog,
-    startGame: gameActionsStartGame,
-    submitGameScore,
-  });
+    startEndless, // New function name
+    stopEndless,  // New function name
+  } = useEndlessMode();
+
 
   const refreshLeaderboards = useCallback(async () => {
-    // Используем wsClient.isConnected напрямую для немедленной проверки
     if (!wsClient.isConnected) {
       addLog('Not connected. Cannot refresh leaderboards.');
       toast.warning('Not connected. Please connect first.');
@@ -122,7 +118,7 @@ export const useGameeFlowAnalyzer = () => {
   }, [addLog, leaderboardIds]);
 
   const connect = useCallback(async () => {
-    const wsConnected = await wsConnect(); // Получаем статус подключения
+    const wsConnected = await wsConnect();
     if (wsConnected) {
       const authSuccess = await authenticate();
       if (authSuccess) {
@@ -134,7 +130,7 @@ export const useGameeFlowAnalyzer = () => {
   const disconnect = useCallback(() => {
     wsDisconnect();
     resetAuthAndBalance();
-    stopEndlessSubmission();
+    stopEndless(); // Use the new function name
     setChanges([]);
     setPlayerHistory({});
 
@@ -142,9 +138,8 @@ export const useGameeFlowAnalyzer = () => {
       clearInterval(autoRefreshIntervalRef.current);
       autoRefreshIntervalRef.current = null;
     }
-  }, [wsDisconnect, resetAuthAndBalance, stopEndlessSubmission, setChanges, setPlayerHistory]);
+  }, [wsDisconnect, resetAuthAndBalance, stopEndless, setChanges, setPlayerHistory]);
 
-  // Specific handlers for events relevant to GameeFlowAnalyzer
   const handleLeaderboardEvent = useCallback((payload: any) => {
     const lb = payload?.leaderboard || {};
     const players = (payload?.players || []).map((p: any) => ({
@@ -174,7 +169,6 @@ export const useGameeFlowAnalyzer = () => {
     toast.error(`Error: ${JSON.stringify(payload?.error || payload)}`);
   }, [addLog]);
 
-  // Effect for setting up WebSocket listeners
   useEffect(() => {
     wsClient.on('leaderboard', handleLeaderboardEvent);
     wsClient.on('getLeaderBoard', handleGetLeaderBoardListEvent);
@@ -188,7 +182,7 @@ export const useGameeFlowAnalyzer = () => {
   }, [handleLeaderboardEvent, handleGetLeaderBoardListEvent, handleGenericErrorEvent]);
 
   useEffect(() => {
-    if (autoRefresh && wsClient.isConnected) { // Используем wsClient.isConnected
+    if (autoRefresh && wsClient.isConnected) {
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);
       }
@@ -204,7 +198,7 @@ export const useGameeFlowAnalyzer = () => {
         clearInterval(autoRefreshIntervalRef.current);
       }
     };
-  }, [autoRefresh, refreshLeaderboards]); // Удален isConnected из зависимостей
+  }, [autoRefresh, refreshLeaderboards]);
 
   const toggleAutoRefresh = useCallback(() => {
     setAutoRefresh((prev) => !prev);
@@ -241,9 +235,9 @@ export const useGameeFlowAnalyzer = () => {
     endlessCount,
     targetVip,
     setTargetVip,
-    startEndlessSubmission,
-    stopEndlessSubmission,
-    startGame: gameActionsStartGame,
+    startEndless,
+    stopEndless,
+    startGame,
     submitGameScore,
     gameCrash,
     endGame,

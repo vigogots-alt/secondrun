@@ -15,7 +15,7 @@ interface ActionPanelsProps {
     ftn_address: string;
     withdrawal_amount: string;
   };
-  // Endless Mode Props
+  // Endless Mode Props (now directly from useEndlessMode)
   endlessRunning: boolean;
   endlessDelay: number;
   setEndlessDelay: (delay: number) => void;
@@ -26,8 +26,8 @@ interface ActionPanelsProps {
   endlessCount: number;
   targetVip: number;
   setTargetVip: (vip: number) => void;
-  startEndlessSubmission: () => void;
-  stopEndlessSubmission: () => void;
+  startEndless: () => void; // Updated function name
+  stopEndless: () => void;  // Updated function name
   // Game Actions Props
   startGame: () => Promise<void>;
   submitGameScore: (score: number, index: number, ftn: string) => Promise<void>;
@@ -64,8 +64,8 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
   endlessCount,
   targetVip,
   setTargetVip,
-  startEndlessSubmission,
-  stopEndlessSubmission,
+  startEndless, // Updated function name
+  stopEndless,  // Updated function name
   startGame,
   submitGameScore,
   gameCrash,
@@ -97,8 +97,8 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
         endlessCount={endlessCount}
         targetVip={targetVip}
         setTargetVip={setTargetVip}
-        startEndlessSubmission={startEndlessSubmission}
-        stopEndlessSubmission={stopEndlessSubmission}
+        startEndless={startEndless} // Updated function name
+        stopEndless={stopEndless}  // Updated function name
       />
 
       <FinancialActions

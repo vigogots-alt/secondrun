@@ -1,38 +1,43 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { useGameActions } from './useGameActions';
+import { useAuthAndBalance } from './useAuthAndBalance';
+import { useWebSocketConnection } from './useWebSocketConnection';
 
-interface UseEndlessModeProps {
-  isConnected: boolean;
-  sessionToken: string | null;
-  vipCoin: number;
-  addLog: (message: string) => void;
-  startGame: () => Promise<void>;
-  submitGameScore: (score: number, index: number, ftn: string) => Promise<void>;
-}
+export const useEndlessMode = () => {
+  const { isConnected, addLog } = useWebSocketConnection();
+  const { sessionToken, vipCoin, chips, ftnBalance } = useAuthAndBalance({ addLog });
 
-export const useEndlessMode = ({
-  isConnected,
-  sessionToken,
-  vipCoin,
-  addLog,
-  startGame,
-  submitGameScore,
-}: UseEndlessModeProps) => {
-  const [endlessRunning, setEndlessRunning] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [submissions, setSubmissions] = useState(0);
   const [endlessDelay, setEndlessDelay] = useState(1.0);
-  const [scoreMultiplier, setScoreMultiplier] = useState(10);
-  const [gameId, setGameId] = useState(7);
-  const [endlessCount, setEndlessCount] = useState(0);
+  const [scoreMultiplier, setScoreMultiplier] = useState(22);
+  const [gameId, setGameId] = useState(7); // Changed to number
   const [targetVip, setTargetVip] = useState(0);
   const endlessSubmissionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startEndlessSubmission = useCallback(async () => {
-    if (!isConnected || endlessRunning) {
+  // Get game actions from useGameActions hook
+  const {
+    startGame,
+    submitGameScore,
+    endGame,
+  } = useGameActions({
+    isConnected,
+    sessionToken,
+    vipCoin,
+    chips,
+    ftnBalance,
+    addLog,
+    gameId,
+  });
+
+  const startEndless = useCallback(async () => {
+    if (!isConnected || isRunning) {
       toast.warning('Not connected or endless mode already running.');
       return;
     }
-    setEndlessRunning(true);
-    setEndlessCount(0);
+    setIsRunning(true);
+    setSubmissions(0);
     addLog('Starting endless score submission...');
     toast.info('Endless score submission started.');
 
@@ -40,28 +45,37 @@ export const useEndlessMode = ({
 
     let i = 0;
     endlessSubmissionIntervalRef.current = setInterval(async () => {
-      if (!endlessRunning) { // Check again inside interval to handle external stop
+      if (!isRunning) { // Check again inside interval to handle external stop
         clearInterval(endlessSubmissionIntervalRef.current!);
         endlessSubmissionIntervalRef.current = null;
         return;
       }
 
       const score = (i + 1) * scoreMultiplier + Math.floor(Math.random() * 21) - 10; // Random variation
-      const ftn = String(Math.floor((i + 1) / 2) + Math.floor(Math.random() * 2)); // Slight variation
+      const ftn = String(Math.min(i, 22)); // User's requested ftn generation
 
       await submitGameScore(score, i, ftn);
-      setEndlessCount(prev => prev + 1);
+      setSubmissions(prev => {
+        const newSubmissions = prev + 1;
+        if (newSubmissions >= 43) { // User's requested end of round logic
+          addLog('Reached 43 submissions, ending game and restarting round...');
+          endGame(); // Call the actual endGame action
+          startGame(); // Start a new game session for the next round
+          return 0; // Reset index for the new round
+        }
+        return newSubmissions;
+      });
       i++;
 
       if (targetVip > 0 && vipCoin >= targetVip) {
-        stopEndlessSubmission();
+        stopEndless();
         toast.success(`Target VIP ${targetVip} reached!`);
       }
     }, (endlessDelay * 1000) + (Math.random() * 400 - 200)); // Jittered delay
-  }, [isConnected, endlessRunning, endlessDelay, scoreMultiplier, gameId, targetVip, vipCoin, addLog, startGame, submitGameScore]);
+  }, [isConnected, isRunning, endlessDelay, scoreMultiplier, gameId, targetVip, vipCoin, addLog, startGame, submitGameScore, endGame]);
 
-  const stopEndlessSubmission = useCallback(() => {
-    setEndlessRunning(false);
+  const stopEndless = useCallback(() => {
+    setIsRunning(false);
     if (endlessSubmissionIntervalRef.current) {
       clearInterval(endlessSubmissionIntervalRef.current);
       endlessSubmissionIntervalRef.current = null;
@@ -70,7 +84,7 @@ export const useEndlessMode = ({
     toast.info('Endless score submission stopped.');
   }, [addLog]);
 
-  // Cleanup interval on unmount or if endlessRunning becomes false externally
+  // Cleanup interval on unmount or if isRunning becomes false externally
   useEffect(() => {
     return () => {
       if (endlessSubmissionIntervalRef.current) {
@@ -80,17 +94,17 @@ export const useEndlessMode = ({
   }, []);
 
   return {
-    endlessRunning,
+    isRunning,
+    submissions,
     endlessDelay,
     setEndlessDelay,
     scoreMultiplier,
     setScoreMultiplier,
     gameId,
     setGameId,
-    endlessCount,
     targetVip,
     setTargetVip,
-    startEndlessSubmission,
-    stopEndlessSubmission,
+    startEndless,
+    stopEndless,
   };
 };

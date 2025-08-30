@@ -17,8 +17,8 @@ interface EndlessModeControlsProps {
   endlessCount: number;
   targetVip: number;
   setTargetVip: (vip: number) => void;
-  startEndlessSubmission: () => void;
-  stopEndlessSubmission: () => void;
+  startEndless: () => void; // Updated function name
+  stopEndless: () => void;  // Updated function name
 }
 
 export const EndlessModeControls: React.FC<EndlessModeControlsProps> = ({
@@ -33,8 +33,8 @@ export const EndlessModeControls: React.FC<EndlessModeControlsProps> = ({
   endlessCount,
   targetVip,
   setTargetVip,
-  startEndlessSubmission,
-  stopEndlessSubmission,
+  startEndless, // Updated function name
+  stopEndless,  // Updated function name
 }) => {
   return (
     <Card className="bg-card text-card-foreground border-border shadow-lg">
@@ -84,7 +84,7 @@ export const EndlessModeControls: React.FC<EndlessModeControlsProps> = ({
           />
         </div>
         <Button
-          onClick={startEndlessSubmission}
+          onClick={startEndless} // Updated function name
           disabled={endlessRunning || !isConnected}
           className="w-full bg-green-600 hover:bg-green-700 text-white"
         >
@@ -92,7 +92,7 @@ export const EndlessModeControls: React.FC<EndlessModeControlsProps> = ({
           {endlessRunning ? "Running..." : "Start Endless"}
         </Button>
         <Button
-          onClick={stopEndlessSubmission}
+          onClick={stopEndless} // Updated function name
           disabled={!endlessRunning}
           variant="destructive"
           className="w-full"
