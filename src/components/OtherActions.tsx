@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { wsClient } from '@/lib/api'; // Import wsClient for custom action
+import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
 
 interface OtherActionsProps {
   isConnected: boolean;
-  submitGameScore: (score: number, index: number, ftn: string) => Promise<void>;
+  submitGameScore: (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => Promise<void>; // Updated signature
   startGame: () => Promise<void>;
   gameCrash: () => Promise<void>;
   endGame: () => Promise<void>;
@@ -21,6 +21,7 @@ interface OtherActionsProps {
   getUserNotification: () => Promise<void>;
   userListForFriend: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  collect22Coins: () => Promise<void>; // New prop
 }
 
 export const OtherActions: React.FC<OtherActionsProps> = ({
@@ -37,14 +38,16 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
   getUserNotification,
   userListForFriend,
   deleteAccount,
+  collect22Coins, // Destructure new prop
 }) => {
   const [customRequestName, setCustomRequestName] = useState('');
   const [customRequestData, setCustomRequestData] = useState('');
 
   // State for custom game score submission
-  const [customScore, setCustomScore] = useState(22); // Default to 22 as per request
+  const [customScore, setCustomScore] = useState(22);
   const [customIndex, setCustomIndex] = useState(3);
-  const [customFtn, setCustomFtn] = useState('0');
+  const [customFtn, setCustomFtn] = useState('0'); // Keep as string for input
+  const [customSyncState, setCustomSyncState] = useState(false); // New state for syncState
 
   const handleCustomAction = async () => {
     if (!isConnected) {
@@ -65,7 +68,9 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
       toast.warning('Not connected. Please connect first.');
       return;
     }
-    await submitGameScore(customScore, customIndex, customFtn);
+    const now = new Date();
+    const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    await submitGameScore(customScore, customIndex, customFtn, customSyncState, indexTime);
   };
 
   return (
@@ -74,11 +79,16 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
         <CardTitle className="text-xl font-semibold">Other Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        <Button onClick={() => submitGameScore(100, 0, "0")} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
+        {/* New button for collecting 22 coins */}
+        <Button onClick={collect22Coins} disabled={!isConnected} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+          Collect 22 Coins (Index 3)
+        </Button>
         
-        {/* New section for custom game score submission */}
+        <Button onClick={() => submitGameScore(100, 0, "0", false, new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }))} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
+        
+        {/* Section for custom game score submission */}
         <div className="pt-4 border-t border-border mt-4">
-          <h3 className="text-lg font-semibold mb-2">Custom Game Score</h3>
+          <h3 className="text-lg font-semibold mb-2">Custom Game Score Submission</h3>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <Label htmlFor="custom-score">Score</Label>
             <Input
@@ -98,7 +108,7 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
               disabled={!isConnected}
               className="bg-input text-foreground border-border"
             />
-            <Label htmlFor="custom-ftn">FTN</Label>
+            <Label htmlFor="custom-ftn">FTN (string)</Label>
             <Input
               id="custom-ftn"
               type="text"
@@ -107,12 +117,21 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
               disabled={!isConnected}
               className="bg-input text-foreground border-border"
             />
+            <Label htmlFor="custom-sync-state">Sync State</Label>
+            <input
+              id="custom-sync-state"
+              type="checkbox"
+              checked={customSyncState}
+              onChange={(e) => setCustomSyncState(e.target.checked)}
+              disabled={!isConnected}
+              className="col-span-1 mt-2"
+            />
           </div>
           <Button onClick={handleCustomScoreSubmission} disabled={!isConnected} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
             Submit Custom Score
           </Button>
         </div>
-        {/* End new section */}
+        {/* End custom score section */}
 
         <Button onClick={startGame} disabled={!isConnected} className="w-full">Start Game</Button>
         <Button onClick={gameCrash} disabled={!isConnected} className="w-full">Game Crash</Button>

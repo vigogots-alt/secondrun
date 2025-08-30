@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
-import { generateSha256Hash } from '@/utils/crypto'; // Import from new utility
+import { generateSha256Hash } from '@/utils/crypto';
 
 interface UseGameActionsProps {
   isConnected: boolean;
@@ -10,7 +10,8 @@ interface UseGameActionsProps {
   chips: number;
   ftnBalance: number;
   addLog: (message: string) => void;
-  gameId: number; // Assuming gameId is needed for startGame
+  gameId: number;
+  leaderboardIds: number[]; // Add leaderboardIds here
 }
 
 export const useGameActions = ({
@@ -21,6 +22,7 @@ export const useGameActions = ({
   ftnBalance,
   addLog,
   gameId,
+  leaderboardIds, // Destructure leaderboardIds
 }: UseGameActionsProps) => {
 
   const startGame = useCallback(async () => {
@@ -42,28 +44,28 @@ export const useGameActions = ({
     }
   }, [isConnected, sessionToken, gameId, addLog]);
 
-  const submitGameScore = useCallback(async (score: number, index: number, ftn: string) => {
+  // Modified submitGameScore to accept syncState and indexTime
+  const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => {
     if (!isConnected || !sessionToken) {
       addLog('Submit Game Score: Not connected or not authenticated. Aborting.');
       toast.warning('Not connected or not authenticated.');
       return;
     }
-    addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}`);
+    addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}, syncState: ${syncState}, indexTime: ${indexTime}`);
     try {
       let currentStartScore = vipCoin;
 
-      // Parse ftn to a number. If it's not a valid number, default to 0.0.
-      const numericFtn = parseFloat(ftn);
-      const finalFtn = isNaN(numericFtn) ? 0.0 : numericFtn;
+      // Hash generation as per user's example: startScore + index + score + ftn (as string)
+      const dataToHash = `${currentStartScore}${index}${score}${ftn}`;
+      let currentHash = await generateSha256Hash(dataToHash);
 
-      let currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${finalFtn}`);
       let scoreData = {
         startScore: currentStartScore,
         index: index,
-        indexTime: new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        syncState: (index % 2 === 0),
+        indexTime: indexTime, // Use provided indexTime
+        syncState: syncState, // Use provided syncState
         hash: currentHash,
-        ftn: finalFtn, // Send as a number
+        ftn: ftn, // Send ftn as string "0"
         score: score
       };
 
@@ -76,7 +78,8 @@ export const useGameActions = ({
         addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
         // Get updated VIP coin for the retry
         currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
-        currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${finalFtn}`);
+        const retryDataToHash = `${currentStartScore}${index}${score}${ftn}`;
+        currentHash = await generateSha256Hash(retryDataToHash);
         scoreData = { // Recreate scoreData with updated values
           ...scoreData,
           startScore: currentStartScore,
@@ -102,7 +105,49 @@ export const useGameActions = ({
       addLog(`Submit Game Score: An unexpected error occurred: ${error}`);
       toast.error('Failed to submit score due to an unexpected error.');
     }
-  }, [isConnected, sessionToken, vipCoin, addLog]);
+  }, [isConnected, sessionToken, vipCoin, addLog]); // Added vipCoin to dependencies
+
+  // New function to collect 22 coins with the specified sequence
+  const collect22Coins = useCallback(async () => {
+    if (!isConnected || !sessionToken) {
+        toast.warning('Not connected or not authenticated.');
+        return;
+    }
+    addLog('Initiating 22 coins collection sequence...');
+    toast.info('Collecting 22 coins...');
+
+    try {
+        // 1. Send updateSession
+        await updateSession();
+        // 2. Send getLevels
+        await getLevels();
+        // 3. Send getLeaderBoardPlayers for all LBs
+        for (const lbId of leaderboardIds) {
+            await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
+            addLog(`Requested leaderboard players for LB ${lbId}`);
+            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay
+        }
+        // 4. Send getUpgrades
+        await getUpgrades();
+
+        // 5. Send gameScore for 22 coins
+        const score = 22;
+        const index = 3;
+        const ftn = "0"; // As per user's request
+        const syncState = true; // As per user's request for index 3
+
+        const now = new Date();
+        const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+        await submitGameScore(score, index, ftn, syncState, indexTime);
+        toast.success('22 coins collection sequence completed.');
+
+    } catch (error) {
+        addLog(`Failed to collect 22 coins: ${error}`);
+        toast.error('Failed to collect 22 coins.');
+    }
+  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, submitGameScore, leaderboardIds]);
+
 
   const gameCrash = useCallback(async () => {
     if (!isConnected) {
@@ -315,7 +360,7 @@ export const useGameActions = ({
       return;
     }
     if (ftnBalance < parsedAmount) {
-      toast.error(`Insufficient FTN balance: ${fttnBalance}. Requested: ${parsedAmount}`);
+      toast.error(`Insufficient FTN balance: ${ftnBalance}. Requested: ${parsedAmount}`);
       return;
     }
 
@@ -353,5 +398,6 @@ export const useGameActions = ({
     swapTransactions,
     collectBonus,
     payoutFtn,
+    collect22Coins, // Expose the new function
   };
 };

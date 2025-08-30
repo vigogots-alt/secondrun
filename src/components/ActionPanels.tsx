@@ -26,11 +26,11 @@ interface ActionPanelsProps {
   endlessCount: number;
   targetVip: number;
   setTargetVip: (vip: number) => void;
-  startEndless: () => void; // Updated function name
-  stopEndless: () => void;  // Updated function name
+  startEndless: () => void;
+  stopEndless: () => void;
   // Game Actions Props
   startGame: () => Promise<void>;
-  submitGameScore: (score: number, index: number, ftn: string) => Promise<void>;
+  submitGameScore: (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => Promise<void>; // Updated signature
   gameCrash: () => Promise<void>;
   endGame: () => Promise<void>;
   updateSession: () => Promise<void>;
@@ -41,6 +41,7 @@ interface ActionPanelsProps {
   getUserNotification: () => Promise<void>;
   userListForFriend: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  collect22Coins: () => Promise<void>; // New prop
   // Financial Actions Props
   getRate: () => Promise<void>;
   swapTransactions: (amount: string, currency: string) => Promise<void>;
@@ -64,8 +65,8 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
   endlessCount,
   targetVip,
   setTargetVip,
-  startEndless, // Updated function name
-  stopEndless,  // Updated function name
+  startEndless,
+  stopEndless,
   startGame,
   submitGameScore,
   gameCrash,
@@ -78,6 +79,7 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
   getUserNotification,
   userListForFriend,
   deleteAccount,
+  collect22Coins, // Destructure new prop
   getRate,
   swapTransactions,
   collectBonus,
@@ -97,8 +99,8 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
         endlessCount={endlessCount}
         targetVip={targetVip}
         setTargetVip={setTargetVip}
-        startEndless={startEndless} // Updated function name
-        stopEndless={stopEndless}  // Updated function name
+        startEndless={startEndless}
+        stopEndless={stopEndless}
       />
 
       <FinancialActions
@@ -124,6 +126,7 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
         getUserNotification={getUserNotification}
         userListForFriend={userListForFriend}
         deleteAccount={deleteAccount}
+        collect22Coins={collect22Coins} // Pass the new function
       />
     </div>
   );

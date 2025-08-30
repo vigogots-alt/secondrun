@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { useGameActions } from './useGameActions';
+import { useGameActions } from './useGameActions'; // Updated import
 import { useAuthAndBalance } from './useAuthAndBalance';
 import { useWebSocketConnection } from './useWebSocketConnection';
 
@@ -17,9 +17,12 @@ export const useEndlessMode = () => {
   const endlessSubmissionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Get game actions from useGameActions hook
+  // Note: useEndlessMode needs its own instance of useGameActions,
+  // but it needs to pass the correct leaderboardIds if it were to call collect22Coins.
+  // For submitGameScore, it just needs the basic props.
   const {
     startGame,
-    submitGameScore,
+    submitGameScore, // This is the updated submitGameScore
     endGame,
   } = useGameActions({
     isConnected,
@@ -29,6 +32,7 @@ export const useEndlessMode = () => {
     ftnBalance,
     addLog,
     gameId,
+    leaderboardIds: [], // Pass an empty array or specific IDs if needed by endless mode
   });
 
   const startEndless = useCallback(async () => {
@@ -52,9 +56,13 @@ export const useEndlessMode = () => {
       }
 
       const score = (i + 1) * scoreMultiplier + Math.floor(Math.random() * 21) - 10; // Random variation
-      const ftn = String(Math.min(i, 22)); // User's requested ftn generation
+      const ftn = String(Math.min(i, 22)); // User's requested ftn generation, keep as string
 
-      await submitGameScore(score, i, ftn);
+      const now = new Date();
+      const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      const syncState = (i % 2 === 0); // Original logic for syncState in endless mode
+
+      await submitGameScore(score, i, ftn, syncState, indexTime); // Updated call with new parameters
       setSubmissions(prev => {
         const newSubmissions = prev + 1;
         if (newSubmissions >= 43) { // User's requested end of round logic

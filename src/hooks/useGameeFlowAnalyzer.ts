@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLeaderboardData } from './useLeaderboardData';
-import { useEndlessMode } from './useEndlessMode'; // Updated import
-import { useGameActions } from './useGameActions';
+import { useEndlessMode } from './useEndlessMode';
+import { useGameActions } from './useGameActions'; // Updated import
 import { useWebSocketConnection } from './useWebSocketConnection';
 import { useAuthAndBalance } from './useAuthAndBalance';
 
@@ -33,7 +33,7 @@ export const useGameeFlowAnalyzer = () => {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const leaderboardIds = [21, 18, 19, 20];
+  const leaderboardIds = [21, 18, 19, 20]; // Defined here
 
   const {
     leaderboardData,
@@ -65,6 +65,7 @@ export const useGameeFlowAnalyzer = () => {
     swapTransactions,
     collectBonus,
     payoutFtn,
+    collect22Coins, // New function from useGameActions
   } = useGameActions({
     isConnected,
     sessionToken,
@@ -73,22 +74,23 @@ export const useGameeFlowAnalyzer = () => {
     ftnBalance,
     addLog,
     gameId: 7, // Default gameId for general actions
+    leaderboardIds: leaderboardIds, // Pass leaderboardIds here
   });
 
   // useEndlessMode is now self-contained and gets its own dependencies
   const {
-    isRunning: endlessRunning, // Renamed to match previous prop name for components
-    submissions: endlessCount, // Renamed to match previous prop name for components
+    isRunning: endlessRunning,
+    submissions: endlessCount,
     endlessDelay,
     setEndlessDelay,
     scoreMultiplier,
     setScoreMultiplier,
-    gameId, // This gameId is managed by useEndlessMode itself
+    gameId,
     setGameId,
     targetVip,
     setTargetVip,
-    startEndless, // New function name
-    stopEndless,  // New function name
+    startEndless,
+    stopEndless,
   } = useEndlessMode();
 
 
@@ -130,7 +132,7 @@ export const useGameeFlowAnalyzer = () => {
   const disconnect = useCallback(() => {
     wsDisconnect();
     resetAuthAndBalance();
-    stopEndless(); // Use the new function name
+    stopEndless();
     setChanges([]);
     setPlayerHistory({});
 
@@ -253,5 +255,6 @@ export const useGameeFlowAnalyzer = () => {
     swapTransactions,
     collectBonus,
     payoutFtn,
+    collect22Coins, // Expose the new function
   };
 };
