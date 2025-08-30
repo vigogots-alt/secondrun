@@ -40,8 +40,15 @@ export const useEndlessMode = ({
   // Use a ref for the interval ID to manage it across renders
   const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Ref to hold the latest `isRunning` state without being a dependency of `runSubmission`
+  const isRunningRef = useRef(isRunning);
+  useEffect(() => {
+    isRunningRef.current = isRunning;
+  }, [isRunning]);
+
   const runSubmission = useCallback(async () => {
-    if (!isConnected || !isRunning) {
+    // Use the ref for isRunning here
+    if (!isConnected || !isRunningRef.current) {
       // If not connected or stopped externally, clear interval
       if (intervalIdRef.current) clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
@@ -86,10 +93,10 @@ export const useEndlessMode = ({
     });
 
     if (targetVip > 0 && latestVipCoin.current >= targetVip) {
-      setIsRunning(false);
+      setIsRunning(false); // This will update the `isRunning` state, which `isRunningRef` will pick up
       toast.success(`Target VIP ${targetVip} reached!`);
     }
-  }, [isConnected, isRunning, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin, gameId]); // Removed 'submissions' from dependencies
+  }, [isConnected, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin, gameId]); // `isRunning` removed from dependencies
 
   useEffect(() => {
     if (isRunning && isConnected) {
