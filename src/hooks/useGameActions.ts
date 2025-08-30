@@ -44,7 +44,6 @@ export const useGameActions = ({
     }
   }, [isConnected, sessionToken, gameId, addLog]);
 
-  // Modified submitGameScore to accept syncState and indexTime
   const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => {
     if (!isConnected || !sessionToken) {
       addLog('Submit Game Score: Not connected or not authenticated. Aborting.');
@@ -106,48 +105,6 @@ export const useGameActions = ({
       toast.error('Failed to submit score due to an unexpected error.');
     }
   }, [isConnected, sessionToken, vipCoin, addLog]); // Added vipCoin to dependencies
-
-  // New function to collect 22 coins with the specified sequence
-  const collect22Coins = useCallback(async () => {
-    if (!isConnected || !sessionToken) {
-        toast.warning('Not connected or not authenticated.');
-        return;
-    }
-    addLog('Initiating 22 coins collection sequence...');
-    toast.info('Collecting 22 coins...');
-
-    try {
-        // 1. Send updateSession
-        await updateSession();
-        // 2. Send getLevels
-        await getLevels();
-        // 3. Send getLeaderBoardPlayers for all LBs
-        for (const lbId of leaderboardIds) {
-            await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
-            addLog(`Requested leaderboard players for LB ${lbId}`);
-            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay
-        }
-        // 4. Send getUpgrades
-        await getUpgrades();
-
-        // 5. Send gameScore for 22 coins
-        const score = 22;
-        const index = 3;
-        const ftn = "0"; // As per user's request
-        const syncState = true; // As per user's request for index 3
-
-        const now = new Date();
-        const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-        await submitGameScore(score, index, ftn, syncState, indexTime);
-        toast.success('22 coins collection sequence completed.');
-
-    } catch (error) {
-        addLog(`Failed to collect 22 coins: ${error}`);
-        toast.error('Failed to collect 22 coins.');
-    }
-  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, submitGameScore, leaderboardIds]);
-
 
   const gameCrash = useCallback(async () => {
     if (!isConnected) {
@@ -224,6 +181,48 @@ export const useGameActions = ({
       toast.error('Failed to get upgrades.');
     }
   }, [isConnected, addLog]);
+
+  // New function to collect 22 coins with the specified sequence
+  const collect22Coins = useCallback(async () => {
+    if (!isConnected || !sessionToken) {
+        toast.warning('Not connected or not authenticated.');
+        return;
+    }
+    addLog('Initiating 22 coins collection sequence...');
+    toast.info('Collecting 22 coins...');
+
+    try {
+        // 1. Send updateSession
+        await updateSession();
+        // 2. Send getLevels
+        await getLevels();
+        // 3. Send getLeaderBoardPlayers for all LBs
+        for (const lbId of leaderboardIds) {
+            await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
+            addLog(`Requested leaderboard players for LB ${lbId}`);
+            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay
+        }
+        // 4. Send getUpgrades
+        await getUpgrades();
+
+        // 5. Send gameScore for 22 coins
+        const score = 22;
+        const index = 3;
+        const ftn = "0"; // As per user's request
+        const syncState = true; // As per user's request for index 3
+
+        const now = new Date();
+        const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+        await submitGameScore(score, index, ftn, syncState, indexTime);
+        toast.success('22 coins collection sequence completed.');
+
+    } catch (error) {
+        addLog(`Failed to collect 22 coins: ${error}`);
+        toast.error('Failed to collect 22 coins.');
+    }
+  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, submitGameScore, leaderboardIds]);
+
 
   const getFriends = useCallback(async () => {
     if (!isConnected) {
@@ -398,6 +397,6 @@ export const useGameActions = ({
     swapTransactions,
     collectBonus,
     payoutFtn,
-    collect22Coins, // Expose the new function
+    collect22Coins,
   };
 };
