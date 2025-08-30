@@ -98,13 +98,17 @@ export const useEndlessMode = ({
       runSubmission();
       intervalIdRef.current = setInterval(runSubmission, (endlessDelay * 1000) + (Math.random() * 400 - 200));
     } else {
-      addLog('Stopping endless score submission interval.');
+      // Removed duplicate log here. The cleanup function will handle logging 'Stopping'.
       if (intervalIdRef.current) clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
     }
 
     return () => {
-      if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+      if (intervalIdRef.current) {
+        addLog('Stopping endless score submission interval.'); // Log only once in cleanup
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
     };
   }, [isRunning, isConnected, endlessDelay, runSubmission]);
 
