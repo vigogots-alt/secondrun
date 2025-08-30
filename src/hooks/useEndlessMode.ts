@@ -42,34 +42,37 @@ export const useEndlessMode = ({
       return;
     }
 
-    let currentScore: number;
-    let currentSyncState: boolean;
+    // Use functional update to get the latest submissions value
+    setSubmissions(prevSubmissions => {
+      let currentScore: number;
+      let currentSyncState: boolean;
 
-    // Use the current 'submissions' state as the index
-    const currentIndex = submissions;
+      const currentIndex = prevSubmissions; // Use prevSubmissions as the index
 
-    // Logic for specific scores and syncState based on index
-    if (currentIndex === 0 || currentIndex === 1) {
-      currentScore = 0;
-      currentSyncState = (currentIndex % 2 === 0);
-    } else if (currentIndex === 2) {
-      currentScore = 9;
-      currentSyncState = (currentIndex % 2 === 0);
-    } else if (currentIndex === 3) {
-      currentScore = 22;
-      currentSyncState = true;
-    } else {
-      currentScore = (currentIndex + 1) * scoreMultiplier + Math.floor(Math.random() * 21) - 10;
-      currentSyncState = (currentIndex % 2 === 0);
-    }
+      // Logic for specific scores and syncState based on index
+      if (currentIndex === 0 || currentIndex === 1) {
+        currentScore = 0;
+        currentSyncState = (currentIndex % 2 === 0);
+      } else if (currentIndex === 2) {
+        currentScore = 9;
+        currentSyncState = (currentIndex % 2 === 0);
+      } else if (currentIndex === 3) {
+        currentScore = 22;
+        currentSyncState = true;
+      } else {
+        currentScore = (currentIndex + 1) * scoreMultiplier + Math.floor(Math.random() * 21) - 10;
+        currentSyncState = (currentIndex % 2 === 0);
+      }
 
-    const ftn = "0";
-    const indexTime = getFormattedUTCTime(); // Use the new utility function
-    
-    await submitGameScore(currentScore, currentIndex, ftn, currentSyncState, indexTime);
-    
-    setSubmissions(prev => {
-      const newSubmissions = prev + 1;
+      const ftn = "0";
+      const indexTime = getFormattedUTCTime(); // Use the new utility function
+      
+      // Call submitGameScore with the current values
+      // Note: submitGameScore is an async function, but we are inside a synchronous callback for setSubmissions.
+      // We call it without 'await' here to not block the state update, and let it run in the background.
+      submitGameScore(currentScore, currentIndex, ftn, currentSyncState, indexTime);
+
+      const newSubmissions = prevSubmissions + 1;
       if (newSubmissions >= 43) {
         addLog('Reached 43 submissions, ending game and restarting round...');
         endGame();
@@ -83,7 +86,7 @@ export const useEndlessMode = ({
       setIsRunning(false);
       toast.success(`Target VIP ${targetVip} reached!`);
     }
-  }, [isConnected, isRunning, submissions, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin, gameId]);
+  }, [isConnected, isRunning, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin, gameId]); // Removed 'submissions' from dependencies
 
   useEffect(() => {
     if (isRunning && isConnected) {
@@ -103,7 +106,7 @@ export const useEndlessMode = ({
     return () => {
       if (intervalIdRef.current) clearInterval(intervalIdRef.current);
     };
-  }, [isRunning, isConnected, endlessDelay, runSubmission]); // runSubmission is now a dependency because it's a useCallback
+  }, [isRunning, isConnected, endlessDelay, runSubmission]);
 
   const startEndless = useCallback(async () => {
     if (!isConnected || isRunning) {
