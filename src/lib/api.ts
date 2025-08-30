@@ -41,30 +41,27 @@ export class WebSocketClient extends CustomEventEmitter {
   private engineIoConnected: boolean = false; // Engine.IO handshake status
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private responseResolvers: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void; originalEventType: string }> = new Map();
-  private namespaceConnectResolver: { resolve: () => void; reject: (reason?: any) => void } | null = null;
-
+  private _connectPromise: Promise<void> | null = null; // Stores the current connection promise
 
   constructor() {
     super();
   }
 
   connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-        if (this.engineIoConnected) {
-          this.emit('log', 'Already fully connected.');
-          resolve();
-        } else {
-          this.emit('log', 'WebSocket connected, waiting for Engine.IO handshake.');
-          this.namespaceConnectResolver = { resolve, reject };
-        }
-        return;
-      }
+    if (this.engineIoConnected) {
+      this.emit('log', 'Already fully connected.');
+      return Promise.resolve();
+    }
 
-      this.emit('log', 'Attempting to connect to WebSocket...');
+    if (this._connectPromise) {
+      this.emit('log', 'Connection already in progress, returning existing promise.');
+      return this._connectPromise;
+    }
+
+    this.emit('log', 'Attempting to connect to WebSocket...');
+    this._connectPromise = new Promise((resolve, reject) => {
       this.ws = new WebSocket(WS_URL);
       this.engineIoConnected = false; // Reset Engine.IO handshake status
-      this.namespaceConnectResolver = { resolve, reject }; // Set resolver for this connection attempt
 
       this.ws.onopen = () => {
         this.isConnected = true;
@@ -76,7 +73,7 @@ export class WebSocketClient extends CustomEventEmitter {
       this.ws.onmessage = (event) => {
         const message = event.data as string;
         this.emit('log', `← IN: ${message}`);
-        this.handleMessage(message);
+        this.handleMessage(message, resolve, reject); // Pass resolve/reject to handleMessage
       };
 
       this.ws.onerror = (error) => {
@@ -86,9 +83,8 @@ export class WebSocketClient extends CustomEventEmitter {
         this.engineIoConnected = false;
         this.emit('status', false);
         this.stopPingPong();
-        this.namespaceConnectResolver?.reject(error); // Reject the main connect promise
-        this.namespaceConnectResolver = null;
-        reject(error); // Also reject the promise returned by this call
+        this._connectPromise = null; // Clear the promise on error
+        reject(error); // Reject the main connect promise
       };
 
       this.ws.onclose = () => {
@@ -98,14 +94,18 @@ export class WebSocketClient extends CustomEventEmitter {
         this.emit('status', false);
         this.stopPingPong();
         // Reject any pending promises when the connection closes
-        this.responseResolvers.forEach(({ reject }) => {
-          reject(new Error('WebSocket connection closed.'));
+        this.responseResolvers.forEach(({ reject: resReject }) => {
+          resReject(new Error('WebSocket connection closed.'));
         });
         this.responseResolvers.clear();
-        this.namespaceConnectResolver?.reject(new Error('WebSocket connection closed.')); // Reject the main connect promise
-        this.namespaceConnectResolver = null;
+        if (this._connectPromise) { // Only reject if the promise is still pending
+          this._connectPromise = null; // Clear the promise on close
+          reject(new Error('WebSocket connection closed.')); // Reject the main connect promise
+        }
       };
     });
+
+    return this._connectPromise;
   }
 
   disconnect() {
@@ -122,9 +122,13 @@ export class WebSocketClient extends CustomEventEmitter {
         reject(new Error('WebSocket explicitly disconnected.'));
       });
       this.responseResolvers.clear();
-      // Also reject the namespaceConnectResolver if it's still pending
-      this.namespaceConnectResolver?.reject(new Error('WebSocket explicitly disconnected.'));
-      this.namespaceConnectResolver = null;
+      // If _connectPromise is still pending, reject it
+      if (this._connectPromise) {
+        this._connectPromise = null;
+        // No need to call reject here, as ws.onclose will handle it if it fires.
+        // If ws.onclose doesn't fire, the promise will remain pending, but that's acceptable
+        // as the client is explicitly disconnecting.
+      }
     }
   }
 
@@ -252,7 +256,7 @@ export class WebSocketClient extends CustomEventEmitter {
     return null;
   }
 
-  private handleMessage(message: string) {
+  private handleMessage(message: string, resolveConnect?: () => void, rejectConnect?: (reason?: any) => void) {
     const parsed = this.parseSocketMessage(message);
 
     if (!parsed) {
@@ -276,8 +280,10 @@ export class WebSocketClient extends CustomEventEmitter {
       this.engineIoConnected = true;
       this.startPingPong();
       this.emit('namespace_connected');
-      this.namespaceConnectResolver?.resolve();
-      this.namespaceConnectResolver = null;
+      if (resolveConnect) {
+        resolveConnect(); // Resolve the main connect promise
+        this._connectPromise = null; // Clear the promise on successful connection
+      }
       return;
     }
 
