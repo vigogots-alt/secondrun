@@ -49,14 +49,16 @@ export const useWebSocketConnection = (): UseWebSocketConnectionResult => {
   useEffect(() => {
     wsClient.on('log', addLog);
     wsClient.on('status', setIsConnected);
-    wsClient.on('error', (err) => addLog(`WS Error: ${err}`));
+    // Removed redundant error listener here, as it's handled in useGameeFlowAnalyzer.ts
+    // wsClient.on('error', (err) => addLog(`WS Error: ${err}`)); 
     wsClient.on('initial_connect', (data) => addLog(`Initial WS connect data: ${JSON.stringify(data)}`));
     wsClient.on('namespace_connected', () => addLog('Namespace connected.'));
 
     return () => {
       wsClient.off('log', addLog);
       wsClient.off('status', setIsConnected);
-      wsClient.off('error', (err) => addLog(`WS Error: ${err}`));
+      // Removed redundant error listener here
+      // wsClient.off('error', (err) => addLog(`WS Error: ${err}`));
       wsClient.off('initial_connect', (data) => addLog(`Initial WS connect data: ${JSON.stringify(data)}`));
       wsClient.off('namespace_connected', () => addLog('Namespace connected.'));
     };
