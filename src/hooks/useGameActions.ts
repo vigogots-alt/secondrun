@@ -44,10 +44,11 @@ export const useGameActions = ({
 
   const submitGameScore = useCallback(async (score: number, index: number, ftn: string) => {
     if (!isConnected || !sessionToken) {
+      addLog('Submit Game Score: Not connected or not authenticated. Aborting.');
       toast.warning('Not connected or not authenticated.');
       return;
     }
-    addLog(`Submitting score: ${score}, index: ${index}, ftn: ${ftn}`);
+    addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}`);
     try {
       let currentStartScore = vipCoin;
       let currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${ftn}`);
@@ -61,11 +62,13 @@ export const useGameActions = ({
         score: score
       };
 
+      addLog(`Submit Game Score: Sending scoreData: ${JSON.stringify(scoreData)}`);
       let response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+      addLog(`Submit Game Score: Received initial response: ${JSON.stringify(response)}`);
 
       // Check for error code 33 first for retry logic
       if (response?.payload?.error?.code === 33) {
-        addLog('Received error code 33, retrying with updated startScore...');
+        addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
         // Get updated VIP coin for the retry
         currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
         currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${ftn}`);
@@ -75,21 +78,24 @@ export const useGameActions = ({
           hash: currentHash,
         };
         
+        addLog(`Submit Game Score: Retrying with updated scoreData: ${JSON.stringify(scoreData)}`);
         // Attempt retry
         response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+        addLog(`Submit Game Score: Received retry response: ${JSON.stringify(response)}`);
       }
 
       // After initial attempt or retry, check if there's an error in the payload
       if (response?.payload?.error) {
-        addLog(`Failed to submit score: ${JSON.stringify(response.payload.error)}`);
+        addLog(`Submit Game Score: Failed to submit score: ${JSON.stringify(response.payload.error)}`);
         toast.error(`Failed to submit score: ${JSON.stringify(response.payload.error?.message || response.payload.error)}`);
       } else {
+        addLog(`Submit Game Score: Successfully submitted score ${score}.`);
         toast.success(`Score ${score} submitted.`);
       }
 
     } catch (error) {
-      addLog(`Failed to submit score: ${error}`);
-      toast.error('Failed to submit score.');
+      addLog(`Submit Game Score: An unexpected error occurred: ${error}`);
+      toast.error('Failed to submit score due to an unexpected error.');
     }
   }, [isConnected, sessionToken, vipCoin, addLog]);
 
