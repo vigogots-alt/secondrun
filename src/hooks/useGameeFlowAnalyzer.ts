@@ -94,7 +94,7 @@ export const useGameeFlowAnalyzer = () => {
     isConnected,
     addLog,
     vipCoin,
-    startGame: (overrideGameId?: number) => baseStartGame(overrideGameId !== undefined ? overrideGameId : gameId), // Pass gameId from useEndlessMode
+    startGame: baseStartGame, // Directly pass the memoized baseStartGame
     submitGameScore,
     endGame,
   });
