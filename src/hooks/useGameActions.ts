@@ -51,14 +51,24 @@ export const useGameActions = ({
     addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}`);
     try {
       let currentStartScore = vipCoin;
-      let currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${ftn}`);
+
+      // Ensure ftn is a string representation of a number with a decimal point, if it's numeric
+      let formattedFtn = ftn;
+      if (formattedFtn === '') {
+        formattedFtn = '0.0'; // Default empty string to "0.0"
+      } else if (!isNaN(parseFloat(formattedFtn)) && !formattedFtn.includes('.')) {
+        formattedFtn = `${formattedFtn}.0`; // Add .0 if it's a numeric string without a decimal
+      }
+      // If it's a non-numeric string (e.g., "endGame"), it will remain as is.
+
+      let currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${formattedFtn}`);
       let scoreData = {
         startScore: currentStartScore,
         index: index,
         indexTime: new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         syncState: (index % 2 === 0),
         hash: currentHash,
-        ftn: ftn,
+        ftn: formattedFtn, // Use the formatted FTN
         score: score
       };
 
@@ -71,7 +81,7 @@ export const useGameActions = ({
         addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
         // Get updated VIP coin for the retry
         currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
-        currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${ftn}`);
+        currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${formattedFtn}`);
         scoreData = { // Recreate scoreData with updated values
           ...scoreData,
           startScore: currentStartScore,
