@@ -15,13 +15,6 @@ interface ActionPanelsProps {
     ftn_address: string;
     withdrawal_amount: string;
   };
-  setCredentials: (credentials: {
-    login: string;
-    password: string;
-    fastex_user_id: string;
-    ftn_address: string;
-    withdrawal_amount: string;
-  }) => void; // Add setCredentials prop
   // Endless Mode Props (now directly from useEndlessMode)
   endlessRunning: boolean;
   endlessDelay: number;
@@ -62,7 +55,6 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
   chips,
   ftnBalance,
   credentials,
-  setCredentials, // Destructure setCredentials
   endlessRunning,
   endlessDelay,
   setEndlessDelay,
@@ -118,7 +110,6 @@ export const ActionPanels: React.FC<ActionPanelsProps> = ({
         collectBonus={collectBonus}
         payoutFtn={payoutFtn}
         credentials={credentials}
-        setCredentials={setCredentials} // Pass setCredentials
       />
 
       <OtherActions

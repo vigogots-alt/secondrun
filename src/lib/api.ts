@@ -31,9 +31,6 @@ class CustomEventEmitter {
 const WS_URL = 'wss://social.bcsocial.net/socket.io/?transport=websocket&EIO=3';
 const NAMESPACE = '/first-run2'; // Corresponds to '40/first-run2' and '42/first-run2'
 
-// Define the regex once outside the class for efficiency
-const socketIOMessageRegex = new RegExp(`^4([23])${NAMESPACE},(\\d*)(.*)$`);
-
 export class WebSocketClient extends CustomEventEmitter {
   private ws: WebSocket | null = null;
   private messageId: number = 1;
@@ -41,27 +38,30 @@ export class WebSocketClient extends CustomEventEmitter {
   private engineIoConnected: boolean = false; // Engine.IO handshake status
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private responseResolvers: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void; originalEventType: string }> = new Map();
-  private _connectPromise: Promise<void> | null = null; // Stores the current connection promise
+  private namespaceConnectResolver: { resolve: () => void; reject: (reason?: any) => void } | null = null;
+
 
   constructor() {
     super();
   }
 
   connect(): Promise<void> {
-    if (this.engineIoConnected) {
-      this.emit('log', 'Already fully connected.');
-      return Promise.resolve();
-    }
+    return new Promise((resolve, reject) => {
+      if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+        if (this.engineIoConnected) {
+          this.emit('log', 'Already fully connected.');
+          resolve();
+        } else {
+          this.emit('log', 'WebSocket connected, waiting for Engine.IO handshake.');
+          this.namespaceConnectResolver = { resolve, reject };
+        }
+        return;
+      }
 
-    if (this._connectPromise) {
-      this.emit('log', 'Connection already in progress, returning existing promise.');
-      return this._connectPromise;
-    }
-
-    this.emit('log', 'Attempting to connect to WebSocket...');
-    this._connectPromise = new Promise((resolve, reject) => {
+      this.emit('log', 'Attempting to connect to WebSocket...');
       this.ws = new WebSocket(WS_URL);
       this.engineIoConnected = false; // Reset Engine.IO handshake status
+      this.namespaceConnectResolver = { resolve, reject }; // Set resolver for this connection attempt
 
       this.ws.onopen = () => {
         this.isConnected = true;
@@ -73,7 +73,7 @@ export class WebSocketClient extends CustomEventEmitter {
       this.ws.onmessage = (event) => {
         const message = event.data as string;
         this.emit('log', `← IN: ${message}`);
-        this.handleMessage(message, resolve, reject); // Pass resolve/reject to handleMessage
+        this.handleMessage(message);
       };
 
       this.ws.onerror = (error) => {
@@ -83,8 +83,9 @@ export class WebSocketClient extends CustomEventEmitter {
         this.engineIoConnected = false;
         this.emit('status', false);
         this.stopPingPong();
-        this._connectPromise = null; // Clear the promise on error
-        reject(error); // Reject the main connect promise
+        this.namespaceConnectResolver?.reject(error); // Reject the main connect promise
+        this.namespaceConnectResolver = null;
+        reject(error); // Also reject the promise returned by this call
       };
 
       this.ws.onclose = () => {
@@ -94,18 +95,14 @@ export class WebSocketClient extends CustomEventEmitter {
         this.emit('status', false);
         this.stopPingPong();
         // Reject any pending promises when the connection closes
-        this.responseResolvers.forEach(({ reject: resReject }) => {
-          resReject(new Error('WebSocket connection closed.'));
+        this.responseResolvers.forEach(({ reject }) => {
+          reject(new Error('WebSocket connection closed.'));
         });
         this.responseResolvers.clear();
-        if (this._connectPromise) { // Only reject if the promise is still pending
-          this._connectPromise = null; // Clear the promise on close
-          reject(new Error('WebSocket connection closed.')); // Reject the main connect promise
-        }
+        this.namespaceConnectResolver?.reject(new Error('WebSocket connection closed.')); // Reject the main connect promise
+        this.namespaceConnectResolver = null;
       };
     });
-
-    return this._connectPromise;
   }
 
   disconnect() {
@@ -122,13 +119,9 @@ export class WebSocketClient extends CustomEventEmitter {
         reject(new Error('WebSocket explicitly disconnected.'));
       });
       this.responseResolvers.clear();
-      // If _connectPromise is still pending, reject it
-      if (this._connectPromise) {
-        this._connectPromise = null;
-        // No need to call reject here, as ws.onclose will handle it if it fires.
-        // If ws.onclose doesn't fire, the promise will remain pending, but that's acceptable
-        // as the client is explicitly disconnecting.
-      }
+      // Also reject the namespaceConnectResolver if it's still pending
+      this.namespaceConnectResolver?.reject(new Error('WebSocket explicitly disconnected.'));
+      this.namespaceConnectResolver = null;
     }
   }
 
@@ -191,18 +184,6 @@ export class WebSocketClient extends CustomEventEmitter {
   }
 
   private parseSocketMessage(message: string): { msgId?: string; eventType: string; payload: any } | null {
-    // Helper to parse potential nested JSON strings
-    const parseNestedJson = (data: any) => {
-      if (typeof data === 'string') {
-        try {
-          return JSON.parse(data);
-        } catch (e) {
-          return data; // Return original string if parsing fails
-        }
-      }
-      return data;
-    };
-
     // Engine.IO messages
     if (message === '3') { // Pong response
       return { eventType: 'pong', payload: null };
@@ -225,6 +206,8 @@ export class WebSocketClient extends CustomEventEmitter {
     }
 
     // Socket.IO messages (type 42 or 43)
+    // Use NAMESPACE constant in regex
+    const socketIOMessageRegex = new RegExp(`^4([23])${NAMESPACE},(\\d*)(.*)$`);
     const match = message.match(socketIOMessageRegex);
 
     if (match) {
@@ -239,10 +222,22 @@ export class WebSocketClient extends CustomEventEmitter {
 
         if (type === '2') { // Server-sent event: 42/namespace,["event_name", payload]
           eventType = typeof parsedArray[0] === 'string' ? parsedArray[0] : 'unknown_server_event';
-          payload = parsedArray.length > 1 ? parseNestedJson(parsedArray[1]) : {};
+          payload = parsedArray.length > 1 ? parsedArray[1] : {};
+          // Handle potential nested JSON string in payload
+          if (typeof payload === 'string') {
+            try {
+              payload = JSON.parse(payload);
+            } catch (e) { /* ignore */ }
+          }
         } else { // type === '3', Acknowledgement: 43/namespace,msgId[payload]
           eventType = 'ack_response'; // Generic type, actual event name from resolver
-          payload = parsedArray.length > 0 ? parseNestedJson(parsedArray[0]) : {};
+          payload = parsedArray.length > 0 ? parsedArray[0] : {};
+          // Handle potential nested JSON string in payload
+          if (typeof payload === 'string') {
+            try {
+              payload = JSON.parse(payload);
+            } catch (e) { /* ignore */ }
+          }
         }
 
         return { msgId, eventType, payload };
@@ -256,7 +251,7 @@ export class WebSocketClient extends CustomEventEmitter {
     return null;
   }
 
-  private handleMessage(message: string, resolveConnect?: () => void, rejectConnect?: (reason?: any) => void) {
+  private handleMessage(message: string) {
     const parsed = this.parseSocketMessage(message);
 
     if (!parsed) {
@@ -280,10 +275,8 @@ export class WebSocketClient extends CustomEventEmitter {
       this.engineIoConnected = true;
       this.startPingPong();
       this.emit('namespace_connected');
-      if (resolveConnect) {
-        resolveConnect(); // Resolve the main connect promise
-        this._connectPromise = null; // Clear the promise on successful connection
-      }
+      this.namespaceConnectResolver?.resolve();
+      this.namespaceConnectResolver = null;
       return;
     }
 

@@ -19,8 +19,7 @@ interface FinancialActionsProps {
   swapTransactions: (amount: string, currency: string) => Promise<void>;
   collectBonus: (bonusId: number) => Promise<void>;
   payoutFtn: (amount: string, fastexUserId: string, ftnAddress: string) => Promise<void>;
-  credentials: Credentials;
-  setCredentials: (credentials: Credentials) => void; // Add setCredentials prop
+  credentials: Credentials; // Pass credentials to initialize internal state
 }
 
 export const FinancialActions: React.FC<FinancialActionsProps> = ({
@@ -30,11 +29,22 @@ export const FinancialActions: React.FC<FinancialActionsProps> = ({
   collectBonus,
   payoutFtn,
   credentials,
-  setCredentials, // Destructure setCredentials
 }) => {
   const [swapAmount, setSwapAmount] = useState('1.0');
   const [swapCurrency, setSwapCurrency] = useState('FTN');
   const [bonusId, setBonusId] = useState(1);
+
+  // Internal states for withdrawal, initialized from credentials
+  const [internalWithdrawalAmount, setInternalWithdrawalAmount] = useState(credentials.withdrawal_amount);
+  const [internalWithdrawalFastexId, setInternalWithdrawalFastexId] = useState(credentials.fastex_user_id);
+  const [internalWithdrawalFtnAddress, setInternalWithdrawalFtnAddress] = useState(credentials.ftn_address);
+
+  // Update internal states if credentials change externally
+  useEffect(() => {
+    setInternalWithdrawalAmount(credentials.withdrawal_amount);
+    setInternalWithdrawalFastexId(credentials.fastex_user_id);
+    setInternalWithdrawalFtnAddress(credentials.ftn_address);
+  }, [credentials]);
 
   const handleSwap = async () => {
     await swapTransactions(swapAmount, swapCurrency);
@@ -45,7 +55,7 @@ export const FinancialActions: React.FC<FinancialActionsProps> = ({
   };
 
   const handlePayoutFtn = async () => {
-    await payoutFtn(credentials.withdrawal_amount, credentials.fastex_user_id, credentials.ftn_address);
+    await payoutFtn(internalWithdrawalAmount, internalWithdrawalFastexId, internalWithdrawalFtnAddress);
   };
 
   return (
@@ -114,30 +124,15 @@ export const FinancialActions: React.FC<FinancialActionsProps> = ({
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="withdrawal-amount" className="text-right">Amount</Label>
-                <Input
-                  id="withdrawal-amount"
-                  value={credentials.withdrawal_amount}
-                  onChange={(e) => setCredentials({ ...credentials, withdrawal_amount: e.target.value })}
-                  className="col-span-3 bg-input text-foreground border-border"
-                />
+                <Input id="withdrawal-amount" value={internalWithdrawalAmount} onChange={(e) => setInternalWithdrawalAmount(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="withdrawal-fastex-id" className="text-right">Fastex User ID</Label>
-                <Input
-                  id="withdrawal-fastex-id"
-                  value={credentials.fastex_user_id}
-                  onChange={(e) => setCredentials({ ...credentials, fastex_user_id: e.target.value })}
-                  className="col-span-3 bg-input text-foreground border-border"
-                />
+                <Input id="withdrawal-fastex-id" value={internalWithdrawalFastexId} onChange={(e) => setInternalWithdrawalFastexId(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="withdrawal-ftn-address" className="text-right">FTN Address</Label>
-                <Input
-                  id="withdrawal-ftn-address"
-                  value={credentials.ftn_address}
-                  onChange={(e) => setCredentials({ ...credentials, ftn_address: e.target.value })}
-                  className="col-span-3 bg-input text-foreground border-border"
-                />
+                <Input id="withdrawal-ftn-address" value={internalWithdrawalFtnAddress} onChange={(e) => setInternalWithdrawalFtnAddress(e.target.value)} className="col-span-3 bg-input text-foreground border-border" />
               </div>
             </div>
             <DialogFooter>

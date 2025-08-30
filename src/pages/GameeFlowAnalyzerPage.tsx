@@ -99,7 +99,6 @@ const GameeFlowAnalyzerPage = () => {
           chips={chips}
           ftnBalance={ftnBalance}
           credentials={credentials}
-          setCredentials={setCredentials} // Pass setCredentials
           endlessRunning={endlessRunning}
           endlessDelay={endlessDelay}
           setEndlessDelay={setEndlessDelay}

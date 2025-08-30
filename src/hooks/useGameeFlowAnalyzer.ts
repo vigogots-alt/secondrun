@@ -6,7 +6,6 @@ import { useEndlessMode } from './useEndlessMode';
 import { useGameActions } from './useGameActions';
 import { useWebSocketConnection } from './useWebSocketConnection';
 import { useAuthAndBalance } from './useAuthAndBalance';
-import { leaderboardIds } from '@/config/leaderboardConfig'; // Import leaderboardIds
 
 export const useGameeFlowAnalyzer = () => {
   const {
@@ -34,8 +33,7 @@ export const useGameeFlowAnalyzer = () => {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // leaderboardIds are now imported from src/config/leaderboardConfig.ts
-  // const leaderboardIds = [21, 18, 19, 20]; // Removed local definition
+  const leaderboardIds = [21, 18, 19, 20]; // Defined here
 
   const {
     leaderboardData,
