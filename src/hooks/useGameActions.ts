@@ -44,6 +44,7 @@ export const useGameActions = ({
     }
   }, [isConnected, sessionToken, gameId, addLog]);
 
+  // Modified submitGameScore to accept syncState and indexTime
   const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => {
     if (!isConnected || !sessionToken) {
       addLog('Submit Game Score: Not connected or not authenticated. Aborting.');
@@ -54,9 +55,9 @@ export const useGameActions = ({
     try {
       let currentStartScore = vipCoin;
 
-      // Hash generation as per user's example: startScore + index + score + ftn (as string)
+      // Hash generation as per user's example: startScore + index + score + ftn + sessionToken
       const dataToHash = `${currentStartScore}${index}${score}${ftn}`;
-      let currentHash = await generateSha256Hash(dataToHash);
+      let currentHash = await generateSha256Hash(dataToHash, sessionToken || undefined); // Pass sessionToken as secret
 
       let scoreData = {
         startScore: currentStartScore,
@@ -78,7 +79,7 @@ export const useGameActions = ({
         // Get updated VIP coin for the retry
         currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
         const retryDataToHash = `${currentStartScore}${index}${score}${ftn}`;
-        currentHash = await generateSha256Hash(retryDataToHash);
+        currentHash = await generateSha256Hash(retryDataToHash, sessionToken || undefined); // Pass sessionToken as secret
         scoreData = { // Recreate scoreData with updated values
           ...scoreData,
           startScore: currentStartScore,

@@ -84,7 +84,8 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
           Collect 22 Coins (Index 3)
         </Button>
         
-        <Button onClick={() => submitGameScore(100, 0, "0", false, new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }))} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
+        {/* Updated sample score button to use syncState: true */}
+        <Button onClick={() => submitGameScore(100, 0, "0", true, new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }))} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
         
         {/* Section for custom game score submission */}
         <div className="pt-4 border-t border-border mt-4">
