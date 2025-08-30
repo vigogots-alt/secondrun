@@ -112,9 +112,7 @@ export const useAuthAndBalance = ({ addLog }: UseAuthAndBalanceProps): UseAuthAn
     };
 
     const handleProfileUpdateMessage = (payload: any) => {
-      console.log("handleProfileUpdateMessage received payload:", payload); // Debug log
       const profile = payload?.profile || {};
-      console.log("Parsed profile from payload:", profile); // Debug log
       const newChips = parseFloat(profile.chips || chips);
       const newVipCoin = parseFloat(profile.vipCoin || vipCoin);
       const newFtnBalance = parseFloat(profile.ftnBalance || ftnBalance);
