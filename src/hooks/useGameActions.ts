@@ -46,15 +46,15 @@ export const useGameActions = ({
     }
   }, [isConnected, sessionToken, defaultGameId, addLog]); // defaultGameId is a dependency
 
-  const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => {
+  const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string, overrideStartScore?: number) => {
     if (!isConnected || !sessionToken) {
       addLog('Submit Game Score: Not connected or not authenticated. Aborting.');
       toast.warning('Not connected or not authenticated.');
       return;
     }
-    addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}, syncState: ${syncState}, indexTime: ${indexTime}`);
+    addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}, syncState: ${syncState}, indexTime: ${indexTime}, overrideStartScore: ${overrideStartScore}`);
     try {
-      let currentStartScore = vipCoin;
+      let currentStartScore = overrideStartScore !== undefined ? overrideStartScore : vipCoin;
 
       // Формируем строку для хэша согласно Python-алгоритму
       const syncStateStr = syncState ? 'true' : 'false';
@@ -77,7 +77,8 @@ export const useGameActions = ({
 
       if (response?.payload?.error?.code === 33) {
         addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
-        currentStartScore = vipCoin;
+        // For retry, always use the current vipCoin from state, unless an override was explicitly given for the retry
+        currentStartScore = overrideStartScore !== undefined ? overrideStartScore : vipCoin; 
         const retryDataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
         currentHash = await generateSha256Hash(retryDataToHash);
         scoreData = {
@@ -223,9 +224,12 @@ export const useGameActions = ({
         const syncState = syncStates[i];
         const ftn = "0";
         const indexTime = getFormattedUTCTime(); // Use the new utility function
+        
+        // Determine startScore: 0 for index 0, currentVipCoin for others
+        const startScoreForSubmission = i === 0 ? 0 : currentVipCoin;
 
-        addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}`);
-        const response = await submitGameScore(score, i, ftn, syncState, indexTime);
+        addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}, startScore=${startScoreForSubmission}`);
+        const response = await submitGameScore(score, i, ftn, syncState, indexTime, startScoreForSubmission);
         addLog(`Response for index ${i}: ${JSON.stringify(response)}`);
 
         if (response?.payload?.error) {
