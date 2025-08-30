@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
+import { getFormattedUTCTime } from '@/utils/time'; // Import the new utility
 
 interface OtherActionsProps {
   isConnected: boolean;
@@ -68,9 +69,7 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
       toast.warning('Not connected. Please connect first.');
       return;
     }
-    const now = new Date();
-    // Use UTC methods for GMT 0
-    const indexTime = `${String(now.getUTCDate()).padStart(2, '0')}.${String(now.getUTCMonth() + 1).padStart(2, '0')}.${now.getUTCFullYear()} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}`;
+    const indexTime = getFormattedUTCTime(); // Use the new utility function
     await submitGameScore(customScore, customIndex, customFtn, customSyncState, indexTime);
   };
 
@@ -87,8 +86,7 @@ export const OtherActions: React.FC<OtherActionsProps> = ({
         
         {/* Updated sample score button to use syncState: true */}
         <Button onClick={() => {
-          const now = new Date();
-          const sampleIndexTime = `${String(now.getUTCDate()).padStart(2, '0')}.${String(now.getUTCMonth() + 1).padStart(2, '0')}.${now.getUTCFullYear()} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}`;
+          const sampleIndexTime = getFormattedUTCTime(); // Use the new utility function
           submitGameScore(100, 0, "0", true, sampleIndexTime);
         }} disabled={!isConnected} className="w-full">Submit Sample Score</Button>
         
