@@ -96,9 +96,11 @@ export const useGameActions = ({
         addLog(`Submit Game Score: Successfully submitted score ${score}.`);
         toast.success(`Score ${score} submitted.`);
       }
+      return response; // Return response for collect22Coins to use
     } catch (error) {
       addLog(`Submit Game Score: An unexpected error occurred: ${error}`);
       toast.error('Failed to submit score due to an unexpected error.');
+      throw error; // Re-throw to propagate error in collect22Coins
     }
   }, [isConnected, sessionToken, vipCoin, addLog]);
 
@@ -193,6 +195,7 @@ export const useGameActions = ({
 
     try {
       // Подготовка сессии
+      // Удален лишний вызов auth
       await updateSession();
       await new Promise(resolve => setTimeout(resolve, 500));
       await getLevels();
@@ -212,7 +215,7 @@ export const useGameActions = ({
       // Отправка gameScore для index 0, 1, 2, 3
       const scores = [0, 0, 9, 22];
       const syncStates = [false, true, true, true];
-      let currentVipCoin = vipCoin; // Initialize with current vipCoin
+      let currentVipCoin = vipCoin; // Initialize with current vipCoin from state
 
       for (let i = 0; i <= 3; i++) {
         const score = scores[i];
@@ -221,21 +224,8 @@ export const useGameActions = ({
         const now = new Date();
         const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-        const syncStateStr = syncState ? 'true' : 'false';
-        const dataToHash = `${currentVipCoin}${i}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
-        const hash = await generateSha256Hash(dataToHash);
-
-        addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}, hash=${hash}`);
-        const scoreData = {
-          startScore: currentVipCoin,
-          index: i,
-          indexTime,
-          syncState,
-          hash,
-          ftn,
-          score
-        };
-        const response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+        addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}`);
+        const response = await submitGameScore(score, i, ftn, syncState, indexTime);
         addLog(`Response for index ${i}: ${JSON.stringify(response)}`);
 
         if (response?.payload?.error) {
@@ -243,10 +233,14 @@ export const useGameActions = ({
           throw new Error(`Failed at index ${i}: ${response.payload.error.description}`);
         }
 
-        // Обнови currentVipCoin из ответа сервера, если есть profileUpdate
-        // Предполагается, что wsClient обновляет vipCoin, и следующий вызов collect22Coins
-        // или submitGameScore будет использовать актуальное значение из состояния React.
-        // Для текущего цикла, currentVipCoin остается тем, что было в начале collect22Coins.
+        // Обновление currentVipCoin из ответа сервера
+        if (response?.payload?.profile?.vipCoin) {
+          currentVipCoin = parseFloat(response.payload.profile.vipCoin);
+          addLog(`Updated currentVipCoin to ${currentVipCoin} from response.`);
+        } else {
+          addLog(`No vipCoin in response for index ${i}. currentVipCoin remains ${currentVipCoin}.`);
+        }
+
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
       }
 
@@ -255,7 +249,7 @@ export const useGameActions = ({
       addLog(`Failed to collect 22 coins: ${error}`);
       toast.error('Failed to collect 22 coins.');
     }
-  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, startGame, leaderboardIds]);
+  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds]);
 
 
   const getFriends = useCallback(async () => {
