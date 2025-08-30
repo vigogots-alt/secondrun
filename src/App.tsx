@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import GameeFlowAnalyzerPage from "./pages/GameeFlowAnalyzerPage"; // Updated import
+import GameeFlowAnalyzerPage from "./pages/GameeFlowAnalyzerPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -15,8 +15,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<GameeFlowAnalyzerPage />} /> {/* Use GameeFlowAnalyzerPage as the main page */}
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/" element={<GameeFlowAnalyzerPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

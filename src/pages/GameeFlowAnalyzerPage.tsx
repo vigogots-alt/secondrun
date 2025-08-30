@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameeFlowAnalyzer } from '@/hooks/useGameeFlowAnalyzer';
-import MadeWithDyad from '../components/made-with-dyad.tsx'; // Updated import
+import MadeWithDyad from '@/components/made-with-dyad';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ConnectionControls } from '@/components/ConnectionControls';
 import { AnalyzerTabs } from '@/components/AnalyzerTabs';
@@ -38,8 +38,8 @@ const GameeFlowAnalyzerPage = () => {
     endlessCount,
     targetVip,
     setTargetVip,
-    startEndlessSubmission,
-    stopEndlessSubmission,
+    startEndless,
+    stopEndless,
     // New Actions
     startGame,
     submitGameScore,
@@ -57,6 +57,7 @@ const GameeFlowAnalyzerPage = () => {
     swapTransactions,
     collectBonus,
     payoutFtn,
+    collect22Coins,
   } = useGameeFlowAnalyzer();
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -108,8 +109,8 @@ const GameeFlowAnalyzerPage = () => {
           endlessCount={endlessCount}
           targetVip={targetVip}
           setTargetVip={setTargetVip}
-          startEndlessSubmission={startEndlessSubmission}
-          stopEndlessSubmission={stopEndlessSubmission}
+          startEndless={startEndless}
+          stopEndless={stopEndless}
           startGame={startGame}
           submitGameScore={submitGameScore}
           gameCrash={gameCrash}
@@ -126,6 +127,7 @@ const GameeFlowAnalyzerPage = () => {
           swapTransactions={swapTransactions}
           collectBonus={collectBonus}
           payoutFtn={payoutFtn}
+          collect22Coins={collect22Coins}
         />
 
         {/* Right Panel: Tabs for Leaderboards, Changes, History, Log */}
