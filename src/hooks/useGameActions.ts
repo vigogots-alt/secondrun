@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { generateSha256Hash } from '@/utils/crypto';
@@ -25,6 +25,11 @@ export const useGameActions = ({
   defaultGameId, // Use defaultGameId
   leaderboardIds,
 }: UseGameActionsProps) => {
+  // Use a ref to always get the latest vipCoin value without re-creating callbacks
+  const latestVipCoin = useRef(vipCoin);
+  useEffect(() => {
+    latestVipCoin.current = vipCoin;
+  }, [vipCoin]);
 
   const startGame = useCallback(async (overrideGameId?: number) => { // Added optional overrideGameId
     const currentGameObjectId = overrideGameId !== undefined ? overrideGameId : defaultGameId; // Use override or default
@@ -54,7 +59,7 @@ export const useGameActions = ({
     }
     addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}, syncState: ${syncState}, indexTime: ${indexTime}`);
     try {
-      let currentStartScore = vipCoin;
+      let currentStartScore = latestVipCoin.current; // Use ref for latest vipCoin
 
       // Формируем строку для хэша согласно Python-алгоритму
       const syncStateStr = syncState ? 'true' : 'false';
@@ -77,7 +82,7 @@ export const useGameActions = ({
 
       if (response?.payload?.error?.code === 33) {
         addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
-        currentStartScore = vipCoin;
+        currentStartScore = latestVipCoin.current; // Use ref for latest vipCoin on retry
         const retryDataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
         currentHash = await generateSha256Hash(retryDataToHash);
         scoreData = {
@@ -104,7 +109,7 @@ export const useGameActions = ({
       toast.error('Failed to submit score due to an unexpected error.');
       throw error; // Re-throw to propagate error in collect22Coins
     }
-  }, [isConnected, sessionToken, vipCoin, addLog]);
+  }, [isConnected, sessionToken, addLog]); // Removed vipCoin from dependencies
 
   const gameCrash = useCallback(async () => {
     if (!isConnected) {
@@ -187,7 +192,7 @@ export const useGameActions = ({
       toast.warning('Not connected or not authenticated.');
       return;
     }
-    if (!vipCoin || vipCoin <= 0) {
+    if (!latestVipCoin.current || latestVipCoin.current <= 0) { // Use ref for latest vipCoin
       addLog('Invalid vipCoin value. Waiting for profileUpdate...');
       toast.error('Invalid vipCoin. Please wait for profile update.');
       return;
@@ -216,7 +221,8 @@ export const useGameActions = ({
       // Отправка gameScore для index 0, 1, 2, 3
       const scores = [0, 0, 9, 22];
       const syncStates = [false, true, true, true];
-      let currentVipCoin = vipCoin; // Initialize with current vipCoin from state
+      // currentVipCoin is now managed by the ref and updated by profileUpdate events
+      // No need for a local variable here, as submitGameScore will use the ref.
 
       for (let i = 0; i <= 3; i++) {
         const score = scores[i];
@@ -233,13 +239,8 @@ export const useGameActions = ({
           throw new Error(`Failed at index ${i}: ${response.payload.error.description}`);
         }
 
-        // Обновление currentVipCoin из ответа сервера
-        if (response?.payload?.profile?.vipCoin) {
-          currentVipCoin = parseFloat(response.payload.profile.vipCoin);
-          addLog(`Updated currentVipCoin to ${currentVipCoin} from response.`);
-        } else {
-          addLog(`No vipCoin in response for index ${i}. currentVipCoin remains ${currentVipCoin}.`);
-        }
+        // The vipCoin ref will be updated by the profileUpdate event listener in useAuthAndBalance
+        // No explicit update needed here.
 
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
       }
@@ -249,7 +250,7 @@ export const useGameActions = ({
       addLog(`Failed to collect 22 coins: ${error}`);
       toast.error('Failed to collect 22 coins.');
     }
-  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds, defaultGameId]);
+  }, [isConnected, sessionToken, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds, defaultGameId]); // Removed vipCoin from dependencies
 
 
   const getFriends = useCallback(async () => {
