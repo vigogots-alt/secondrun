@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, RefObject } from 'react'; // Import RefObject
 import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { generateSha256Hash } from '@/utils/crypto';
@@ -6,10 +6,10 @@ import { getFormattedUTCTime } from '@/utils/time'; // Import the new utility
 
 interface UseGameActionsProps {
   isConnected: boolean;
-  sessionToken: string | null;
-  vipCoin: number;
-  chips: number;
-  ftnBalance: number;
+  sessionTokenRef: RefObject<string | null>; // Changed to RefObject
+  vipCoinRef: RefObject<number>; // Changed to RefObject
+  chipsRef: RefObject<number>; // Changed to RefObject
+  ftnBalanceRef: RefObject<number>; // Changed to RefObject
   addLog: (message: string) => void;
   defaultGameId: number; // Renamed from gameId to defaultGameId to clarify
   leaderboardIds: number[];
@@ -17,10 +17,10 @@ interface UseGameActionsProps {
 
 export const useGameActions = ({
   isConnected,
-  sessionToken,
-  vipCoin,
-  chips,
-  ftnBalance,
+  sessionTokenRef, // Use ref
+  vipCoinRef,      // Use ref
+  chipsRef,        // Use ref
+  ftnBalanceRef,   // Use ref
   addLog,
   defaultGameId, // Use defaultGameId
   leaderboardIds,
@@ -28,14 +28,15 @@ export const useGameActions = ({
 
   const startGame = useCallback(async (overrideGameId?: number) => { // Added optional overrideGameId
     const currentGameObjectId = overrideGameId !== undefined ? overrideGameId : defaultGameId; // Use override or default
-    if (!isConnected || !sessionToken) {
+    const currentSessionToken = sessionTokenRef.current; // Read from ref
+    if (!isConnected || !currentSessionToken) {
       toast.warning('Not connected or not authenticated.');
       return;
     }
     addLog(`Starting game ${currentGameObjectId}...`);
     try {
       await wsClient.sendMessage('start_game', {
-        sessionToken: sessionToken,
+        sessionToken: currentSessionToken, // Use current value from ref
         gameType: "default",
         gameId: currentGameObjectId // Use currentGameObjectId
       });
@@ -44,21 +45,23 @@ export const useGameActions = ({
       addLog(`Failed to start game: ${error}`);
       toast.error('Failed to start game.');
     }
-  }, [isConnected, sessionToken, defaultGameId, addLog]); // defaultGameId is a dependency
+  }, [isConnected, defaultGameId, addLog]); // Dependencies are now stable
 
   const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string, overrideStartScore?: number) => {
-    if (!isConnected || !sessionToken) {
+    const currentSessionToken = sessionTokenRef.current; // Read from ref
+    const currentVipCoin = vipCoinRef.current; // Read from ref
+    if (!isConnected || !currentSessionToken) {
       addLog('Submit Game Score: Not connected or not authenticated. Aborting.');
       toast.warning('Not connected or not authenticated.');
       return;
     }
     addLog(`Submit Game Score: Attempting to submit score: ${score}, index: ${index}, ftn: ${ftn}, syncState: ${syncState}, indexTime: ${indexTime}, overrideStartScore: ${overrideStartScore}`);
     try {
-      let currentStartScore = overrideStartScore !== undefined ? overrideStartScore : vipCoin;
+      let currentStartScore = overrideStartScore !== undefined ? overrideStartScore : currentVipCoin; // Use currentVipCoin from ref
 
       // Формируем строку для хэша согласно Python-алгоритму
       const syncStateStr = syncState ? 'true' : 'false';
-      const dataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
+      const dataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${currentSessionToken}`; // Use currentSessionToken from ref
       let currentHash = await generateSha256Hash(dataToHash);
 
       let scoreData = {
@@ -78,8 +81,8 @@ export const useGameActions = ({
       if (response?.payload?.error?.code === 33) {
         addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
         // For retry, always use the current vipCoin from state, unless an override was explicitly given for the retry
-        currentStartScore = overrideStartScore !== undefined ? overrideStartScore : vipCoin; 
-        const retryDataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
+        currentStartScore = overrideStartScore !== undefined ? overrideStartScore : vipCoinRef.current; // Use vipCoinRef.current for retry
+        const retryDataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${currentSessionToken}`;
         currentHash = await generateSha256Hash(retryDataToHash);
         scoreData = {
           ...scoreData,
@@ -105,7 +108,7 @@ export const useGameActions = ({
       toast.error('Failed to submit score due to an unexpected error.');
       throw error; // Re-throw to propagate error in collect22Coins
     }
-  }, [isConnected, sessionToken, vipCoin, addLog]);
+  }, [isConnected, addLog, generateSha256Hash]); // Dependencies are now stable
 
   const gameCrash = useCallback(async () => {
     if (!isConnected) {
@@ -184,11 +187,13 @@ export const useGameActions = ({
   }, [isConnected, addLog]);
 
   const collect22Coins = useCallback(async () => {
-    if (!isConnected || !sessionToken) {
+    const currentSessionToken = sessionTokenRef.current; // Read from ref
+    const currentVipCoin = vipCoinRef.current; // Read from ref
+    if (!isConnected || !currentSessionToken) {
       toast.warning('Not connected or not authenticated.');
       return;
     }
-    if (!vipCoin || vipCoin <= 0) {
+    if (!currentVipCoin || currentVipCoin <= 0) { // Use currentVipCoin from ref
       addLog('Invalid vipCoin value. Waiting for profileUpdate...');
       toast.error('Invalid vipCoin. Please wait for profile update.');
       return;
@@ -217,7 +222,7 @@ export const useGameActions = ({
       // Отправка gameScore для index 0, 1, 2, 3
       const scores = [0, 0, 9, 22];
       const syncStates = [true, true, true, true]; // Changed syncState for index 0 to true
-      let currentVipCoin = vipCoin; // Initialize with current vipCoin from state
+      let currentVipCoinForLoop = currentVipCoin; // Initialize with current vipCoin from ref
 
       for (let i = 0; i <= 3; i++) {
         const score = scores[i];
@@ -225,8 +230,8 @@ export const useGameActions = ({
         const ftn = "0";
         const indexTime = getFormattedUTCTime(); // Use the new utility function
         
-        // Determine startScore: 0 for index 0, currentVipCoin for others
-        const startScoreForSubmission = i === 0 ? 0 : currentVipCoin;
+        // Determine startScore: always use the current loop's vipCoin
+        const startScoreForSubmission = currentVipCoinForLoop;
 
         addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}, startScore=${startScoreForSubmission}`);
         const response = await submitGameScore(score, i, ftn, syncState, indexTime, startScoreForSubmission);
@@ -239,10 +244,10 @@ export const useGameActions = ({
 
         // Обновление currentVipCoin из ответа сервера
         if (response?.payload?.profile?.vipCoin) {
-          currentVipCoin = parseFloat(response.payload.profile.vipCoin);
-          addLog(`Updated currentVipCoin to ${currentVipCoin} from response.`);
+          currentVipCoinForLoop = parseFloat(response.payload.profile.vipCoin);
+          addLog(`Updated currentVipCoinForLoop to ${currentVipCoinForLoop} from response.`);
         } else {
-          addLog(`No vipCoin in response for index ${i}. currentVipCoin remains ${currentVipCoin}.`);
+          addLog(`No vipCoin in response for index ${i}. currentVipCoinForLoop remains ${currentVipCoinForLoop}.`);
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
@@ -253,7 +258,7 @@ export const useGameActions = ({
       addLog(`Failed to collect 22 coins: ${error}`);
       toast.error('Failed to collect 22 coins.');
     }
-  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds, defaultGameId]);
+  }, [isConnected, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds, defaultGameId]);
 
 
   const getFriends = useCallback(async () => {
@@ -390,8 +395,9 @@ export const useGameActions = ({
       toast.error('Invalid withdrawal amount.');
       return;
     }
-    if (ftnBalance < parsedAmount) {
-      toast.error(`Insufficient FTN balance: ${ftnBalance}. Requested: ${parsedAmount}`);
+    const currentFtnBalance = ftnBalanceRef.current; // Read from ref
+    if (currentFtnBalance < parsedAmount) {
+      toast.error(`Insufficient FTN balance: ${currentFtnBalance}. Requested: ${parsedAmount}`);
       return;
     }
 
@@ -410,8 +416,8 @@ export const useGameActions = ({
       addLog(`Failed to withdraw FTN: ${error}`);
       toast.error('Failed to withdraw FTN.');
     }
-  }, [isConnected, ftnBalance, addLog]);
-
+  }, [isConnected, addLog]); // ftnBalanceRef is not needed as a dependency, its current value is read inside
+  
   return {
     startGame,
     submitGameScore,

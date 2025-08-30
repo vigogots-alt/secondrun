@@ -29,6 +29,26 @@ export const useGameeFlowAnalyzer = () => {
     resetAuthAndBalance,
   } = useAuthAndBalance({ addLog });
 
+  // Create refs for sessionToken, vipCoin, chips, ftnBalance
+  const sessionTokenRef = useRef(sessionToken);
+  const vipCoinRef = useRef(vipCoin);
+  const chipsRef = useRef(chips);
+  const ftnBalanceRef = useRef(ftnBalance);
+
+  // Update refs whenever the state values change
+  useEffect(() => {
+    sessionTokenRef.current = sessionToken;
+  }, [sessionToken]);
+  useEffect(() => {
+    vipCoinRef.current = vipCoin;
+  }, [vipCoin]);
+  useEffect(() => {
+    chipsRef.current = chips;
+  }, [chips]);
+  useEffect(() => {
+    ftnBalanceRef.current = ftnBalance;
+  }, [ftnBalance]);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -67,10 +87,10 @@ export const useGameeFlowAnalyzer = () => {
     collect22Coins,
   } = useGameActions({
     isConnected,
-    sessionToken,
-    vipCoin,
-    chips,
-    ftnBalance,
+    sessionTokenRef, // Pass ref
+    vipCoinRef,      // Pass ref
+    chipsRef,        // Pass ref
+    ftnBalanceRef,   // Pass ref
     addLog,
     defaultGameId: 7, // Changed from gameId to defaultGameId
     leaderboardIds: leaderboardIds,
