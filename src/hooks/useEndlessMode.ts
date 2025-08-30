@@ -1,18 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { useGameActions } from './useGameActions';
-import { useAuthAndBalance } from './useAuthAndBalance';
 import { useWebSocketConnection } from './useWebSocketConnection';
 
-export const useEndlessMode = () => {
-  const { isConnected, addLog } = useWebSocketConnection();
-  const { sessionToken, vipCoin, chips, ftnBalance } = useAuthAndBalance({ addLog });
+interface UseEndlessModeProps {
+  isConnected: boolean;
+  addLog: (message: string) => void;
+  vipCoin: number; // Still needed for target VIP logic
+  startGame: () => Promise<void>;
+  submitGameScore: (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => Promise<any>;
+  endGame: () => Promise<void>;
+}
 
+export const useEndlessMode = ({
+  isConnected,
+  addLog,
+  vipCoin,
+  startGame,
+  submitGameScore,
+  endGame,
+}: UseEndlessModeProps) => {
   const [isRunning, setIsRunning] = useState(false);
   const [submissions, setSubmissions] = useState(0);
   const [endlessDelay, setEndlessDelay] = useState(1.0);
   const [scoreMultiplier, setScoreMultiplier] = useState(22);
-  const [gameId, setGameId] = useState(7);
+  const [gameId, setGameId] = useState(7); // This gameId is for the endless mode itself, not the one passed to useGameActions
   const [targetVip, setTargetVip] = useState(0);
 
   // Use a ref to hold the latest vipCoin for the interval callback
@@ -20,21 +31,6 @@ export const useEndlessMode = () => {
   useEffect(() => {
     latestVipCoin.current = vipCoin;
   }, [vipCoin]);
-
-  const {
-    startGame,
-    submitGameScore,
-    endGame,
-  } = useGameActions({
-    isConnected,
-    sessionToken,
-    vipCoin: latestVipCoin.current, // Pass the ref's current value to useGameActions
-    chips,
-    ftnBalance,
-    addLog,
-    gameId,
-    leaderboardIds: [],
-  });
 
   // This useEffect will manage the interval for endless submissions
   useEffect(() => {
@@ -102,7 +98,7 @@ export const useEndlessMode = () => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isRunning, isConnected, endlessDelay, scoreMultiplier, gameId, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin]); // Dependencies for useEffect
+  }, [isRunning, isConnected, endlessDelay, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin]); // Dependencies for useEffect
 
   const startEndless = useCallback(async () => {
     if (!isConnected || isRunning) {
@@ -129,8 +125,8 @@ export const useEndlessMode = () => {
     setEndlessDelay,
     scoreMultiplier,
     setScoreMultiplier,
-    gameId,
-    setGameId,
+    gameId, // This gameId is managed by useEndlessMode
+    setGameId, // This setGameId is managed by useEndlessMode
     targetVip,
     setTargetVip,
     startEndless,

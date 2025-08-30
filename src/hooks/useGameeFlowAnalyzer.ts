@@ -3,7 +3,7 @@ import { wsClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLeaderboardData } from './useLeaderboardData';
 import { useEndlessMode } from './useEndlessMode';
-import { useGameActions } from './useGameActions'; // Updated import
+import { useGameActions } from './useGameActions';
 import { useWebSocketConnection } from './useWebSocketConnection';
 import { useAuthAndBalance } from './useAuthAndBalance';
 
@@ -46,8 +46,7 @@ export const useGameeFlowAnalyzer = () => {
     setPlayerHistory,
   } = useLeaderboardData(addLog);
 
-  // Game Actions are now managed here and passed to components,
-  // but useEndlessMode will get its own instance.
+  // Game Actions are now managed here
   const {
     startGame,
     submitGameScore,
@@ -65,7 +64,7 @@ export const useGameeFlowAnalyzer = () => {
     swapTransactions,
     collectBonus,
     payoutFtn,
-    collect22Coins, // New function from useGameActions
+    collect22Coins,
   } = useGameActions({
     isConnected,
     sessionToken,
@@ -74,10 +73,10 @@ export const useGameeFlowAnalyzer = () => {
     ftnBalance,
     addLog,
     gameId: 7, // Default gameId for general actions
-    leaderboardIds: leaderboardIds, // Pass leaderboardIds here
+    leaderboardIds: leaderboardIds,
   });
 
-  // useEndlessMode is now self-contained and gets its own dependencies
+  // useEndlessMode now receives game action functions as props
   const {
     isRunning: endlessRunning,
     submissions: endlessCount,
@@ -85,13 +84,20 @@ export const useGameeFlowAnalyzer = () => {
     setEndlessDelay,
     scoreMultiplier,
     setScoreMultiplier,
-    gameId,
-    setGameId,
+    gameId, // This gameId is specific to endless mode and managed by useEndlessMode
+    setGameId, // This setGameId is specific to endless mode and managed by useEndlessMode
     targetVip,
     setTargetVip,
     startEndless,
     stopEndless,
-  } = useEndlessMode();
+  } = useEndlessMode({
+    isConnected,
+    addLog,
+    vipCoin,
+    startGame,
+    submitGameScore,
+    endGame,
+  });
 
 
   const refreshLeaderboards = useCallback(async () => {
@@ -232,8 +238,8 @@ export const useGameeFlowAnalyzer = () => {
     setEndlessDelay,
     scoreMultiplier,
     setScoreMultiplier,
-    gameId,
-    setGameId,
+    gameId, // Expose gameId from useEndlessMode
+    setGameId, // Expose setGameId from useEndlessMode
     endlessCount,
     targetVip,
     setTargetVip,
@@ -255,6 +261,6 @@ export const useGameeFlowAnalyzer = () => {
     swapTransactions,
     collectBonus,
     payoutFtn,
-    collect22Coins, // Expose the new function
+    collect22Coins,
   };
 };
