@@ -98,7 +98,7 @@ export const useGameActions = ({
 
       if (response?.payload?.error) {
         addLog(`Submit Game Score: Failed to submit score: ${JSON.stringify(response.payload.error)}`);
-        toast.error(`Failed to submit score: ${JSON.stringify(response.payload.error?.message || response.payload.error)}`);
+        toast.error(`Failed to submit score: ${response.payload.error.description || JSON.stringify(response.payload.error)}`);
       } else {
         addLog(`Submit Game Score: Successfully submitted score ${score}.`);
         toast.success(`Score ${score} submitted.`);
@@ -214,6 +214,9 @@ export const useGameActions = ({
       await getUpgrades();
       await new Promise(resolve => setTimeout(resolve, 500));
 
+      // Log current VIP Coin before score submissions
+      addLog(`Current VIP Coin before score submissions: ${latestVipCoin.current}`);
+
       // Запуск игры
       await startGame(defaultGameId); // Pass defaultGameId here
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -250,7 +253,7 @@ export const useGameActions = ({
       addLog(`Failed to collect 22 coins: ${error}`);
       toast.error('Failed to collect 22 coins.');
     }
-  }, [isConnected, sessionToken, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds, defaultGameId]); // Removed vipCoin from dependencies
+  }, [isConnected, sessionToken, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds, defaultGameId]);
 
 
   const getFriends = useCallback(async () => {
