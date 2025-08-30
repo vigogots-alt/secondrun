@@ -52,23 +52,18 @@ export const useGameActions = ({
     try {
       let currentStartScore = vipCoin;
 
-      // Ensure ftn is a string representation of a number with a decimal point, if it's numeric
-      let formattedFtn = ftn;
-      if (formattedFtn === '') {
-        formattedFtn = '0.0'; // Default empty string to "0.0"
-      } else if (!isNaN(parseFloat(formattedFtn)) && !formattedFtn.includes('.')) {
-        formattedFtn = `${formattedFtn}.0`; // Add .0 if it's a numeric string without a decimal
-      }
-      // If it's a non-numeric string (e.g., "endGame"), it will remain as is.
+      // Parse ftn to a number. If it's not a valid number, default to 0.0.
+      const numericFtn = parseFloat(ftn);
+      const finalFtn = isNaN(numericFtn) ? 0.0 : numericFtn;
 
-      let currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${formattedFtn}`);
+      let currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${finalFtn}`);
       let scoreData = {
         startScore: currentStartScore,
         index: index,
         indexTime: new Date().toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         syncState: (index % 2 === 0),
         hash: currentHash,
-        ftn: formattedFtn, // Use the formatted FTN
+        ftn: finalFtn, // Send as a number
         score: score
       };
 
@@ -81,7 +76,7 @@ export const useGameActions = ({
         addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
         // Get updated VIP coin for the retry
         currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
-        currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${formattedFtn}`);
+        currentHash = await generateSha256Hash(`${currentStartScore}${index}${score}${finalFtn}`);
         scoreData = { // Recreate scoreData with updated values
           ...scoreData,
           startScore: currentStartScore,
@@ -320,7 +315,7 @@ export const useGameActions = ({
       return;
     }
     if (ftnBalance < parsedAmount) {
-      toast.error(`Insufficient FTN balance: ${ftnBalance}. Requested: ${parsedAmount}`);
+      toast.error(`Insufficient FTN balance: ${fttnBalance}. Requested: ${parsedAmount}`);
       return;
     }
 
