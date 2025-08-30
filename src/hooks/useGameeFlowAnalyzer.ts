@@ -48,7 +48,7 @@ export const useGameeFlowAnalyzer = () => {
 
   // Game Actions are now managed here
   const {
-    startGame,
+    startGame: baseStartGame, // Renamed to avoid conflict with wrapped version
     submitGameScore,
     gameCrash,
     endGame,
@@ -72,7 +72,7 @@ export const useGameeFlowAnalyzer = () => {
     chips,
     ftnBalance,
     addLog,
-    gameId: 7, // Default gameId for general actions
+    defaultGameId: 7, // Changed from gameId to defaultGameId
     leaderboardIds: leaderboardIds,
   });
 
@@ -94,10 +94,15 @@ export const useGameeFlowAnalyzer = () => {
     isConnected,
     addLog,
     vipCoin,
-    startGame,
+    startGame: (overrideGameId?: number) => baseStartGame(overrideGameId !== undefined ? overrideGameId : gameId), // Pass gameId from useEndlessMode
     submitGameScore,
     endGame,
   });
+
+  // Expose the wrapped startGame function
+  const startGame = useCallback((overrideGameId?: number) => {
+    return baseStartGame(overrideGameId !== undefined ? overrideGameId : gameId);
+  }, [baseStartGame, gameId]);
 
 
   const refreshLeaderboards = useCallback(async () => {
@@ -245,7 +250,7 @@ export const useGameeFlowAnalyzer = () => {
     setTargetVip,
     startEndless,
     stopEndless,
-    startGame,
+    startGame, // This is the wrapped startGame
     submitGameScore,
     gameCrash,
     endGame,

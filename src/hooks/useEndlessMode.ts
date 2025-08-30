@@ -5,7 +5,7 @@ interface UseEndlessModeProps {
   isConnected: boolean;
   addLog: (message: string) => void;
   vipCoin: number; // Still needed for target VIP logic
-  startGame: () => Promise<void>;
+  startGame: (gameId?: number) => Promise<void>; // Updated signature
   submitGameScore: (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => Promise<any>;
   endGame: () => Promise<void>;
 }
@@ -71,7 +71,7 @@ export const useEndlessMode = ({
         if (newSubmissions >= 43) {
           addLog('Reached 43 submissions, ending game and restarting round...');
           endGame();
-          startGame();
+          startGame(gameId); // Pass gameId here
           return 0; // Reset index for the new round
         }
         return newSubmissions;
@@ -97,7 +97,7 @@ export const useEndlessMode = ({
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isRunning, isConnected, endlessDelay, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin]); // Dependencies for useEffect
+  }, [isRunning, isConnected, endlessDelay, scoreMultiplier, targetVip, addLog, startGame, submitGameScore, endGame, latestVipCoin, gameId]); // Added gameId dependency
 
   const startEndless = useCallback(async () => {
     if (!isConnected || isRunning) {
@@ -108,8 +108,8 @@ export const useEndlessMode = ({
     setSubmissions(0);
     addLog('Starting endless score submission...');
     toast.info('Endless score submission started.');
-    await startGame(); // Start game session first
-  }, [isConnected, isRunning, addLog, startGame]);
+    await startGame(gameId); // Start game session first, passing the gameId
+  }, [isConnected, isRunning, addLog, startGame, gameId]); // Added gameId dependency
 
   const stopEndless = useCallback(() => {
     setIsRunning(false);

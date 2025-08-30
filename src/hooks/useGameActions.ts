@@ -10,8 +10,8 @@ interface UseGameActionsProps {
   chips: number;
   ftnBalance: number;
   addLog: (message: string) => void;
-  gameId: number;
-  leaderboardIds: number[]; // Add leaderboardIds here
+  defaultGameId: number; // Renamed from gameId to defaultGameId to clarify
+  leaderboardIds: number[];
 }
 
 export const useGameActions = ({
@@ -21,28 +21,29 @@ export const useGameActions = ({
   chips,
   ftnBalance,
   addLog,
-  gameId,
-  leaderboardIds, // Destructure leaderboardIds
+  defaultGameId, // Use defaultGameId
+  leaderboardIds,
 }: UseGameActionsProps) => {
 
-  const startGame = useCallback(async () => {
+  const startGame = useCallback(async (overrideGameId?: number) => { // Added optional overrideGameId
+    const currentGameObjectId = overrideGameId !== undefined ? overrideGameId : defaultGameId; // Use override or default
     if (!isConnected || !sessionToken) {
       toast.warning('Not connected or not authenticated.');
       return;
     }
-    addLog(`Starting game ${gameId}...`);
+    addLog(`Starting game ${currentGameObjectId}...`);
     try {
       await wsClient.sendMessage('start_game', {
         sessionToken: sessionToken,
         gameType: "default",
-        gameId: gameId
+        gameId: currentGameObjectId // Use currentGameObjectId
       });
-      toast.success(`Game ${gameId} started.`);
+      toast.success(`Game ${currentGameObjectId} started.`);
     } catch (error) {
       addLog(`Failed to start game: ${error}`);
       toast.error('Failed to start game.');
     }
-  }, [isConnected, sessionToken, gameId, addLog]);
+  }, [isConnected, sessionToken, defaultGameId, addLog]); // defaultGameId is a dependency
 
   const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => {
     if (!isConnected || !sessionToken) {
@@ -195,7 +196,6 @@ export const useGameActions = ({
 
     try {
       // Подготовка сессии
-      // Удален лишний вызов auth
       await updateSession();
       await new Promise(resolve => setTimeout(resolve, 500));
       await getLevels();
@@ -209,7 +209,7 @@ export const useGameActions = ({
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Запуск игры
-      await startGame();
+      await startGame(defaultGameId); // Pass defaultGameId here
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Отправка gameScore для index 0, 1, 2, 3
@@ -249,7 +249,7 @@ export const useGameActions = ({
       addLog(`Failed to collect 22 coins: ${error}`);
       toast.error('Failed to collect 22 coins.');
     }
-  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds]);
+  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, startGame, submitGameScore, leaderboardIds, defaultGameId]);
 
 
   const getFriends = useCallback(async () => {
