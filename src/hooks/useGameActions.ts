@@ -44,7 +44,6 @@ export const useGameActions = ({
     }
   }, [isConnected, sessionToken, gameId, addLog]);
 
-  // Modified submitGameScore to accept syncState and indexTime
   const submitGameScore = useCallback(async (score: number, index: number, ftn: string, syncState: boolean, indexTime: string) => {
     if (!isConnected || !sessionToken) {
       addLog('Submit Game Score: Not connected or not authenticated. Aborting.');
@@ -55,17 +54,18 @@ export const useGameActions = ({
     try {
       let currentStartScore = vipCoin;
 
-      // Hash generation as per user's example: startScore + index + score + ftn + sessionToken
-      const dataToHash = `${currentStartScore}${index}${score}${ftn}`;
-      let currentHash = await generateSha256Hash(dataToHash, sessionToken || undefined); // Pass sessionToken as secret
+      // Формируем строку для хэша согласно Python-алгоритму
+      const syncStateStr = syncState ? 'true' : 'false';
+      const dataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
+      let currentHash = await generateSha256Hash(dataToHash);
 
       let scoreData = {
         startScore: currentStartScore,
         index: index,
-        indexTime: indexTime, // Use provided indexTime
-        syncState: syncState, // Use provided syncState
+        indexTime: indexTime,
+        syncState: syncState,
         hash: currentHash,
-        ftn: ftn, // Send ftn as string "0"
+        ftn: ftn,
         score: score
       };
 
@@ -73,26 +73,22 @@ export const useGameActions = ({
       let response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
       addLog(`Submit Game Score: Received initial response: ${JSON.stringify(response)}`);
 
-      // Check for error code 33 first for retry logic
       if (response?.payload?.error?.code === 33) {
         addLog('Submit Game Score: Received error code 33, retrying with updated startScore...');
-        // Get updated VIP coin for the retry
-        currentStartScore = vipCoin; // vipCoin is a state, so it will reflect the latest value
-        const retryDataToHash = `${currentStartScore}${index}${score}${ftn}`;
-        currentHash = await generateSha256Hash(retryDataToHash, sessionToken || undefined); // Pass sessionToken as secret
-        scoreData = { // Recreate scoreData with updated values
+        currentStartScore = vipCoin;
+        const retryDataToHash = `${currentStartScore}${index}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
+        currentHash = await generateSha256Hash(retryDataToHash);
+        scoreData = {
           ...scoreData,
           startScore: currentStartScore,
-          hash: currentHash,
+          hash: currentHash
         };
-        
+
         addLog(`Submit Game Score: Retrying with updated scoreData: ${JSON.stringify(scoreData)}`);
-        // Attempt retry
         response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
         addLog(`Submit Game Score: Received retry response: ${JSON.stringify(response)}`);
       }
 
-      // After initial attempt or retry, check if there's an error in the payload
       if (response?.payload?.error) {
         addLog(`Submit Game Score: Failed to submit score: ${JSON.stringify(response.payload.error)}`);
         toast.error(`Failed to submit score: ${JSON.stringify(response.payload.error?.message || response.payload.error)}`);
@@ -100,12 +96,11 @@ export const useGameActions = ({
         addLog(`Submit Game Score: Successfully submitted score ${score}.`);
         toast.success(`Score ${score} submitted.`);
       }
-
     } catch (error) {
       addLog(`Submit Game Score: An unexpected error occurred: ${error}`);
       toast.error('Failed to submit score due to an unexpected error.');
     }
-  }, [isConnected, sessionToken, vipCoin, addLog]); // Added vipCoin to dependencies
+  }, [isConnected, sessionToken, vipCoin, addLog]);
 
   const gameCrash = useCallback(async () => {
     if (!isConnected) {
@@ -183,46 +178,84 @@ export const useGameActions = ({
     }
   }, [isConnected, addLog]);
 
-  // New function to collect 22 coins with the specified sequence
   const collect22Coins = useCallback(async () => {
     if (!isConnected || !sessionToken) {
-        toast.warning('Not connected or not authenticated.');
-        return;
+      toast.warning('Not connected or not authenticated.');
+      return;
+    }
+    if (!vipCoin || vipCoin <= 0) {
+      addLog('Invalid vipCoin value. Waiting for profileUpdate...');
+      toast.error('Invalid vipCoin. Please wait for profile update.');
+      return;
     }
     addLog('Initiating 22 coins collection sequence...');
     toast.info('Collecting 22 coins...');
 
     try {
-        // 1. Send updateSession
-        await updateSession();
-        // 2. Send getLevels
-        await getLevels();
-        // 3. Send getLeaderBoardPlayers for all LBs
-        for (const lbId of leaderboardIds) {
-            await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
-            addLog(`Requested leaderboard players for LB ${lbId}`);
-            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay
-        }
-        // 4. Send getUpgrades
-        await getUpgrades();
+      // Подготовка сессии
+      await updateSession();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await getLevels();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      for (const lbId of leaderboardIds) {
+        await wsClient.sendMessage('action', { request: 'getLeaderBoardPlayers', data: { leaderBoardId: lbId } });
+        addLog(`Requested leaderboard players for LB ${lbId}`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      await getUpgrades();
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-        // 5. Send gameScore for 22 coins
-        const score = 22;
-        const index = 3;
-        const ftn = "0"; // As per user's request
-        const syncState = true; // As per user's request for index 3
+      // Запуск игры
+      await startGame();
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Отправка gameScore для index 0, 1, 2, 3
+      const scores = [0, 0, 9, 22];
+      const syncStates = [false, true, true, true];
+      let currentVipCoin = vipCoin; // Initialize with current vipCoin
+
+      for (let i = 0; i <= 3; i++) {
+        const score = scores[i];
+        const syncState = syncStates[i];
+        const ftn = "0";
         const now = new Date();
         const indexTime = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-        await submitGameScore(score, index, ftn, syncState, indexTime);
-        toast.success('22 coins collection sequence completed.');
+        const syncStateStr = syncState ? 'true' : 'false';
+        const dataToHash = `${currentVipCoin}${i}${indexTime}${syncStateStr}${ftn}${score}${sessionToken}`;
+        const hash = await generateSha256Hash(dataToHash);
 
+        addLog(`Submitting score for index ${i}: score=${score}, syncState=${syncState}, hash=${hash}`);
+        const scoreData = {
+          startScore: currentVipCoin,
+          index: i,
+          indexTime,
+          syncState,
+          hash,
+          ftn,
+          score
+        };
+        const response = await wsClient.sendMessage('action', { request: 'gameScore', data: scoreData }, true);
+        addLog(`Response for index ${i}: ${JSON.stringify(response)}`);
+
+        if (response?.payload?.error) {
+          addLog(`Failed at index ${i}: ${JSON.stringify(response.payload.error)}`);
+          throw new Error(`Failed at index ${i}: ${response.payload.error.description}`);
+        }
+
+        // Обнови currentVipCoin из ответа сервера, если есть profileUpdate
+        // Предполагается, что wsClient обновляет vipCoin, и следующий вызов collect22Coins
+        // или submitGameScore будет использовать актуальное значение из состояния React.
+        // Для текущего цикла, currentVipCoin остается тем, что было в начале collect22Coins.
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
+      }
+
+      toast.success('22 coins collection sequence completed.');
     } catch (error) {
-        addLog(`Failed to collect 22 coins: ${error}`);
-        toast.error('Failed to collect 22 coins.');
+      addLog(`Failed to collect 22 coins: ${error}`);
+      toast.error('Failed to collect 22 coins.');
     }
-  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, submitGameScore, leaderboardIds]);
+  }, [isConnected, sessionToken, vipCoin, addLog, updateSession, getLevels, getUpgrades, startGame, leaderboardIds]);
 
 
   const getFriends = useCallback(async () => {
