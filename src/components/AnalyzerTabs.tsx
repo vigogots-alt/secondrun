@@ -1,39 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlayerHistoryChart } from './PlayerHistoryChart'; // Import the new chart component
-
-interface Player {
-  id: string;
-  nickName: string;
-  level: number;
-  xp: number;
-  points: number;
-  chips: number;
-  rank?: number;
-}
-
-interface Leaderboard {
-  id: number;
-  name: string;
-}
-
-interface LeaderboardData {
-  lb: Leaderboard;
-  players: Player[];
-  timestamp: string;
-}
-
-interface PlayerHistoryEntry {
-  time: string;
-  points: number;
-  chips: number;
-  level: number;
-  xp: number;
-  nickName: string;
-}
+import { PlayerHistoryChart, FormattedPlayerHistoryEntry } from './PlayerHistoryChart'; // Import both
+import { Player, Leaderboard, LeaderboardData, PlayerHistoryEntry } from '@/hooks/useLeaderboardData'; // Import interfaces
 
 interface AnalyzerTabsProps {
   leaderboardIds: number[];
@@ -54,6 +25,17 @@ export const AnalyzerTabs: React.FC<AnalyzerTabsProps> = ({
   selectedPlayerId,
   handlePlayerSelect,
 }) => {
+  // Memoize the formatted history for the selected player
+  const formattedSelectedPlayerHistory = useMemo(() => {
+    if (!selectedPlayerId || !playerHistory[selectedPlayerId]) {
+      return [];
+    }
+    return playerHistory[selectedPlayerId].map(entry => ({
+      ...entry,
+      displayTime: new Date(entry.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }));
+  }, [selectedPlayerId, playerHistory]);
+
   return (
     <Tabs defaultValue={`lb-${leaderboardIds[0]}`} className="w-full h-full flex flex-col">
       <TabsList className="grid w-full grid-cols-4 bg-muted text-muted-foreground">
@@ -164,12 +146,12 @@ export const AnalyzerTabs: React.FC<AnalyzerTabsProps> = ({
                   <>
                     <h3 className="text-lg font-semibold mb-2">History for Player: {playerHistory[selectedPlayerId][0]?.nickName || selectedPlayerId}</h3>
                     <div className="flex-grow">
-                      <PlayerHistoryChart history={playerHistory[selectedPlayerId]} />
+                      <PlayerHistoryChart history={formattedSelectedPlayerHistory} /> {/* Pass formatted data */}
                     </div>
                     <ScrollArea className="h-40 mt-4 border-t pt-4"> {/* Added scroll for detailed text history */}
-                      {playerHistory[selectedPlayerId].map((entry, index) => (
+                      {formattedSelectedPlayerHistory.map((entry, index) => ( // Use formatted data here too
                         <p key={index} className="mb-1 text-sm font-mono">
-                          {entry.time}: Pts={entry.points}, Chips={entry.chips}, Lvl={entry.level}, XP={entry.xp}
+                          {entry.displayTime}: Pts={entry.points}, Chips={entry.chips}, Lvl={entry.level}, XP={entry.xp}
                         </p>
                       ))}
                     </ScrollArea>

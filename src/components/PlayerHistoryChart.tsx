@@ -1,17 +1,14 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PlayerHistoryEntry } from '@/hooks/useLeaderboardData'; // Import from hook
 
-interface PlayerHistoryEntry {
-  time: string;
-  points: number;
-  chips: number;
-  level: number;
-  xp: number;
-  nickName: string;
+// New interface for data passed to the chart, extending the base entry
+export interface FormattedPlayerHistoryEntry extends PlayerHistoryEntry {
+  displayTime: string; // Formatted time for display on X-axis
 }
 
 interface PlayerHistoryChartProps {
-  history: PlayerHistoryEntry[];
+  history: FormattedPlayerHistoryEntry[]; // Now expects formatted data
 }
 
 export const PlayerHistoryChart: React.FC<PlayerHistoryChartProps> = ({ history }) => {
@@ -19,16 +16,10 @@ export const PlayerHistoryChart: React.FC<PlayerHistoryChartProps> = ({ history 
     return <p className="text-muted-foreground text-center p-4">No history data to display chart.</p>;
   }
 
-  // Format data for recharts: convert time to a more readable format for XAxis
-  const formattedData = history.map(entry => ({
-    ...entry,
-    time: new Date(entry.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  }));
-
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart
-        data={formattedData}
+        data={history} // Use history directly, as it's already formatted
         margin={{
           top: 5,
           right: 30,
@@ -37,7 +28,7 @@ export const PlayerHistoryChart: React.FC<PlayerHistoryChartProps> = ({ history 
         }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-        <XAxis dataKey="time" stroke="hsl(var(--foreground))" />
+        <XAxis dataKey="displayTime" stroke="hsl(var(--foreground))" /> {/* Use displayTime */}
         <YAxis yAxisId="left" stroke="hsl(var(--primary))" />
         <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent))" />
         <Tooltip
