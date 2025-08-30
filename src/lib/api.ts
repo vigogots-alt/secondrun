@@ -184,10 +184,10 @@ export class WebSocketClient extends CustomEventEmitter {
   }
 
   private parseSocketMessage(message: string): { msgId?: string; eventType: string; payload: any } | null {
+    // Engine.IO messages
     if (message === '3') { // Pong response
       return { eventType: 'pong', payload: null };
     }
-
     if (message.startsWith('0{')) { // Initial Engine.IO connect data
       try {
         const data = JSON.parse(message.substring(1));
@@ -197,15 +197,14 @@ export class WebSocketClient extends CustomEventEmitter {
         return null;
       }
     }
-
     if (message === '40') { // Engine.IO upgrade/ack from server
       return { eventType: 'engineio_ack_from_server', payload: null };
     }
-
     if (message === '40' + NAMESPACE + ',') { // Socket.IO namespace connected from server
       return { eventType: 'namespace_connected', payload: null };
     }
 
+    // Socket.IO messages (type 42 or 43)
     const socketIOMessageRegex = /^4([23])\/first-run2,(\d*)(.*)$/;
     const match = message.match(socketIOMessageRegex);
 
@@ -216,49 +215,27 @@ export class WebSocketClient extends CustomEventEmitter {
 
       try {
         const parsedArray = JSON.parse(jsonPart);
+        let eventType: string;
+        let payload: any;
 
-        let eventType: string = 'unknown';
-        let payload: any = {};
-
-        if (Array.isArray(parsedArray) && parsedArray.length > 0) {
-            let firstElement = parsedArray[0];
-
-            // Try to parse the first element if it's a string, as it might be a nested JSON string
-            if (typeof firstElement === 'string') {
-                try {
-                    const nestedParsed = JSON.parse(firstElement);
-                    // If nested parse is successful, it's likely the actual payload
-                    firstElement = nestedParsed;
-                } catch (e) {
-                    // Not a nested JSON string, keep as is
-                }
-            }
-
-            // Now, determine eventType and payload based on the (potentially re-parsed) firstElement
-            if (typeof firstElement === 'string') {
-                // This is typically for server-initiated messages like ["event_name", payload]
-                // Or for responses where the event name is explicitly the first element
-                eventType = firstElement;
-                if (parsedArray.length > 1) {
-                    payload = parsedArray[1];
-                    // Also try to parse the second element if it's a string
-                    if (typeof payload === 'string') {
-                        try {
-                            payload = JSON.parse(payload);
-                        } catch (e) { /* ignore */ }
-                    }
-                }
-            } else {
-                // This is for responses like ["{\"user\":{...}}"] (after re-parsing firstElement)
-                // or server-initiated like [{payload_object}]
-                // The actual eventType for responses will be taken from responseResolvers in handleMessage
-                // For server-initiated, we can use a generic type.
-                eventType = (type === '3' && msgId) ? 'ack_response' : 'server_data_push';
-                payload = firstElement;
-            }
-        } else {
-            eventType = 'ack';
-            payload = {};
+        if (type === '2') { // Server-sent event: 42/namespace,["event_name", payload]
+          eventType = typeof parsedArray[0] === 'string' ? parsedArray[0] : 'unknown_server_event';
+          payload = parsedArray.length > 1 ? parsedArray[1] : {};
+          // Handle potential nested JSON string in payload
+          if (typeof payload === 'string') {
+            try {
+              payload = JSON.parse(payload);
+            } catch (e) { /* ignore */ }
+          }
+        } else { // type === '3', Acknowledgement: 43/namespace,msgId[payload]
+          eventType = 'ack_response'; // Generic type, actual event name from resolver
+          payload = parsedArray.length > 0 ? parsedArray[0] : {};
+          // Handle potential nested JSON string in payload
+          if (typeof payload === 'string') {
+            try {
+              payload = JSON.parse(payload);
+            } catch (e) { /* ignore */ }
+          }
         }
 
         return { msgId, eventType, payload };
