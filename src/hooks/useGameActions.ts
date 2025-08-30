@@ -216,7 +216,7 @@ export const useGameActions = ({
 
       // Отправка gameScore для index 0, 1, 2, 3
       const scores = [0, 0, 9, 22];
-      const syncStates = [false, true, true, true];
+      const syncStates = [true, true, true, true]; // Changed syncState for index 0 to true
       let currentVipCoin = vipCoin; // Initialize with current vipCoin from state
 
       for (let i = 0; i <= 3; i++) {
