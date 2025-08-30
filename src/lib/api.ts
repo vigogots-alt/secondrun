@@ -200,12 +200,14 @@ export class WebSocketClient extends CustomEventEmitter {
     if (message === '40') { // Engine.IO upgrade/ack from server
       return { eventType: 'engineio_ack_from_server', payload: null };
     }
-    if (message === '40' + NAMESPACE + ',') { // Socket.IO namespace connected from server
+    // Use template literal for consistency
+    if (message === `40${NAMESPACE},`) { // Socket.IO namespace connected from server
       return { eventType: 'namespace_connected', payload: null };
     }
 
     // Socket.IO messages (type 42 or 43)
-    const socketIOMessageRegex = /^4([23])\/first-run2,(\d*)(.*)$/;
+    // Use NAMESPACE constant in regex
+    const socketIOMessageRegex = new RegExp(`^4([23])${NAMESPACE},(\\d*)(.*)$`);
     const match = message.match(socketIOMessageRegex);
 
     if (match) {
@@ -265,7 +267,7 @@ export class WebSocketClient extends CustomEventEmitter {
     }
 
     if (eventType === 'engineio_ack_from_server') { // Server's 40 response
-      this.sendRaw('40' + NAMESPACE); // Connect to Socket.IO namespace
+      this.sendRaw(`40${NAMESPACE}`); // Connect to Socket.IO namespace
       return;
     }
 
